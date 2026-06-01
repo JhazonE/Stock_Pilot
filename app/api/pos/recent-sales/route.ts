@@ -39,7 +39,9 @@ export async function GET(request: NextRequest) {
         (SELECT SUM(points) FROM point_history ph WHERE ph.transaction_reference = st.id AND ph.transaction_type = 'purchase') as points_earned,
         pd.gateway_reference as payment_reference
       FROM sales_transactions st
-      JOIN pos_transactions pt ON st.id = pt.sale_id
+      JOIN pos_transactions pt
+        ON st.id = pt.sale_id
+        AND (pt.transaction_type = 'sale' OR pt.transaction_type IS NULL)
       LEFT JOIN pos_terminals t ON pt.terminal_id = t.id
       LEFT JOIN customers c ON st.customer_id = c.id
       LEFT JOIN customer_loyalty cl ON c.id = cl.customer_id

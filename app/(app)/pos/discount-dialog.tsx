@@ -3,13 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -84,34 +83,42 @@ export function DiscountDialog({
   if (!hasItems) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[380px] p-0 overflow-hidden border-none shadow-2xl">
-        <div className="bg-white p-6 space-y-6">
-          <DialogHeader className="space-y-3">
-            <div className="flex justify-center">
-              <div className="bg-blue-50 p-3 rounded-2xl">
-                <Percent className="w-8 h-8 text-blue-600" />
-              </div>
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <SheetTitle className="sr-only">Discount</SheetTitle>
+        <SheetDescription className="sr-only">Apply a discount to the selected item or all cart items.</SheetDescription>
+
+        {/* Header */}
+        <SheetHeader className="shrink-0 space-y-0 border-b bg-muted/20 px-6 py-4 pr-12 text-left">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Percent className="h-5 w-5" />
             </div>
-            <DialogTitle className="text-2xl font-extrabold text-center text-slate-800">
-              Discounts
-            </DialogTitle>
-            <DialogDescription className="sr-only">Apply a discount to the selected item or all cart items</DialogDescription>
-            <div className="text-sm text-slate-500 text-center bg-slate-50 py-2 px-3 rounded-lg border border-slate-100 truncate">
-              {scope === 'all' ? 'Apply to all items in cart' : `Item: ${item?.name || 'Selected Item'}`}
+            <div>
+              <h2 className="text-lg font-bold leading-none">Apply Discount</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {scope === 'all' ? 'Apply to all items in cart' : `Item: ${item?.name || 'Selected Item'}`}
+              </p>
             </div>
-          </DialogHeader>
-          
+          </div>
+        </SheetHeader>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="space-y-5">
             {/* Scope Toggle */}
-            <div className="flex bg-slate-100/80 p-1.5 rounded-xl border border-slate-200/50">
+            <div className="flex bg-muted p-1.5 rounded-xl border">
               <Button
                 type="button"
                 variant="ghost"
                 className={`flex-1 h-10 text-xs uppercase font-bold tracking-wider transition-all duration-200 rounded-lg ${
-                  scope === 'selected' 
-                    ? 'bg-white shadow-sm text-blue-600 ring-1 ring-slate-200' 
-                    : 'text-slate-500 hover:bg-white/50'
+                  scope === 'selected'
+                    ? 'bg-background shadow-sm text-primary ring-1 ring-border'
+                    : 'text-muted-foreground hover:bg-background/60'
                 }`}
                 onClick={() => setScope('selected')}
                 disabled={!item}
@@ -122,9 +129,9 @@ export function DiscountDialog({
                 type="button"
                 variant="ghost"
                 className={`flex-1 h-10 text-xs uppercase font-bold tracking-wider transition-all duration-200 rounded-lg ${
-                  scope === 'all' 
-                    ? 'bg-white shadow-sm text-blue-600 ring-1 ring-slate-200' 
-                    : 'text-slate-500 hover:bg-white/50'
+                  scope === 'all'
+                    ? 'bg-background shadow-sm text-primary ring-1 ring-border'
+                    : 'text-muted-foreground hover:bg-background/60'
                 }`}
                 onClick={() => {
                   setScope('all');
@@ -136,9 +143,9 @@ export function DiscountDialog({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-600 uppercase tracking-tight ml-1">Discount Type</Label>
-              <Select 
-                value={discountType} 
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-tight ml-1">Discount Type</Label>
+              <Select
+                value={discountType}
                 onValueChange={(val: DiscountType) => {
                   setDiscountType(val);
                   if (val === 'pwd' || val === 'senior' || val === 'naac') {
@@ -150,58 +157,58 @@ export function DiscountDialog({
                   }
                 }}
               >
-                <SelectTrigger className="w-full h-12 border-slate-200 rounded-xl focus:ring-blue-500 bg-slate-50/30">
+                <SelectTrigger className="w-full h-12 rounded-xl bg-muted/30">
                   <SelectValue placeholder="Select discount type" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-200 shadow-xl">
+                <SelectContent className="rounded-xl shadow-xl">
                   <SelectItem value="percent" className="rounded-lg">
                     <div className="flex items-center gap-3 py-1">
-                      <div className="bg-blue-100 p-1.5 rounded-md">
-                        <Percent className="w-4 h-4 text-blue-600" />
+                      <div className="bg-blue-500/10 p-1.5 rounded-md">
+                        <Percent className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <span className="font-medium text-slate-700">Percentage (%)</span>
+                      <span className="font-medium text-foreground">Percentage (%)</span>
                     </div>
                   </SelectItem>
                   {scope === 'selected' && (
                     <SelectItem value="amount" className="rounded-lg">
                       <div className="flex items-center gap-3 py-1">
-                        <div className="bg-green-100 p-1.5 rounded-md">
-                          <Banknote className="w-4 h-4 text-green-600" />
+                        <div className="bg-green-500/10 p-1.5 rounded-md">
+                          <Banknote className="w-4 h-4 text-green-600 dark:text-green-400" />
                         </div>
-                        <span className="font-medium text-slate-700">Fixed Amount (₱)</span>
+                        <span className="font-medium text-foreground">Fixed Amount (₱)</span>
                       </div>
                     </SelectItem>
                   )}
                   <SelectItem value="senior" className="rounded-lg">
                     <div className="flex items-center gap-3 py-1">
-                      <div className="bg-orange-100 p-1.5 rounded-md">
-                        <UserRound className="w-4 h-4 text-orange-600" />
+                      <div className="bg-orange-500/10 p-1.5 rounded-md">
+                        <UserRound className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                       </div>
-                      <span className="font-medium text-slate-700">Senior Citizen (20%)</span>
+                      <span className="font-medium text-foreground">Senior Citizen (20%)</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="pwd" className="rounded-lg">
                     <div className="flex items-center gap-3 py-1">
-                      <div className="bg-purple-100 p-1.5 rounded-md">
-                        <Accessibility className="w-4 h-4 text-purple-600" />
+                      <div className="bg-purple-500/10 p-1.5 rounded-md">
+                        <Accessibility className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       </div>
-                      <span className="font-medium text-slate-700">PWD Discount (20%)</span>
+                      <span className="font-medium text-foreground">PWD Discount (20%)</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="naac" className="rounded-lg">
                     <div className="flex items-center gap-3 py-1">
-                      <div className="bg-teal-100 p-1.5 rounded-md">
-                        <UserRound className="w-4 h-4 text-teal-600" />
+                      <div className="bg-teal-500/10 p-1.5 rounded-md">
+                        <UserRound className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                       </div>
-                      <span className="font-medium text-slate-700">NAAC Discount (20%)</span>
+                      <span className="font-medium text-foreground">NAAC Discount (20%)</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="solo_parent" className="rounded-lg">
                     <div className="flex items-center gap-3 py-1">
-                      <div className="bg-pink-100 p-1.5 rounded-md">
-                        <UserRound className="w-4 h-4 text-pink-600" />
+                      <div className="bg-pink-500/10 p-1.5 rounded-md">
+                        <UserRound className="w-4 h-4 text-pink-600 dark:text-pink-400" />
                       </div>
-                      <span className="font-medium text-slate-700">Solo Parent Discount (10%)</span>
+                      <span className="font-medium text-foreground">Solo Parent Discount (10%)</span>
                     </div>
                   </SelectItem>
                 </SelectContent>
@@ -209,7 +216,7 @@ export function DiscountDialog({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-600 uppercase tracking-tight ml-1">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-tight ml-1">
                 {['pwd', 'senior', 'naac', 'solo_parent'].includes(discountType) ? 'Fixed Rate' : `Value to Subtract`}
               </Label>
               <div className="relative group">
@@ -217,42 +224,44 @@ export function DiscountDialog({
                   type="number"
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
-                  className={`text-center text-3xl font-black h-20 border-2 rounded-2xl transition-all duration-200 focus-visible:ring-blue-500 focus:border-blue-500 ${
-                    ['pwd', 'senior', 'naac', 'solo_parent'].includes(discountType) 
-                      ? 'bg-slate-100 border-slate-200 text-slate-400' 
-                      : 'bg-white border-slate-200 hover:border-slate-300'
+                  className={`text-center text-3xl font-black h-20 border-2 rounded-2xl transition-all duration-200 focus-visible:ring-ring focus:border-primary ${
+                    ['pwd', 'senior', 'naac', 'solo_parent'].includes(discountType)
+                      ? 'bg-muted border-border text-muted-foreground'
+                      : 'bg-background border-input hover:border-muted-foreground/40'
                   }`}
                   readOnly={['pwd', 'senior', 'naac', 'solo_parent'].includes(discountType)}
                   autoFocus={!['pwd', 'senior', 'naac', 'solo_parent'].includes(discountType)}
                   onKeyDown={(e) => e.key === 'Enter' && handleApply()}
                 />
                 <div className={`absolute left-6 top-1/2 -translate-y-1/2 font-bold text-2xl transition-colors duration-200 ${
-                  ['pwd', 'senior', 'naac', 'solo_parent'].includes(discountType) ? 'text-slate-300' : 'text-blue-600'
+                  ['pwd', 'senior', 'naac', 'solo_parent'].includes(discountType) ? 'text-muted-foreground/50' : 'text-primary'
                 }`}>
                   {discountType === 'amount' ? '₱' : '%'}
                 </div>
               </div>
             </div>
           </div>
-
-          <div className="flex gap-3 pt-2">
-            <Button 
-              variant="outline" 
-              className="flex-1 h-12 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 transition-colors"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              className="flex-1 h-12 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200/50 transition-all active:scale-[0.98]" 
-              onClick={handleApply}
-            >
-              Apply Discount
-            </Button>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Sticky footer */}
+        <div className="grid shrink-0 grid-cols-[1fr_2fr] gap-3 border-t bg-background px-6 py-4">
+          <Button
+            variant="outline"
+            className="h-12 font-bold text-muted-foreground hover:bg-muted"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="h-12 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 active:scale-[0.98]"
+            onClick={handleApply}
+          >
+            <Percent className="mr-2 h-4 w-4" />
+            Apply Discount
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 

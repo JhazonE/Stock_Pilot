@@ -1,6 +1,6 @@
 ; LJMA Supermarket Inno Setup Script
 #define AppName "LJMA SUPERMARKET"
-#define AppVersion "1.14"
+#define AppVersion "1.15"
 #define AppPublisher "BHAGOH SYSTEMS"
 #define AppExeName "Stock Pilot.exe"
 

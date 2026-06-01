@@ -353,6 +353,71 @@ const migrations = [
       console.log('  Updated stock columns to DECIMAL(15,4)');
     }
   },
+
+  // ── 079 ──────────────────────────────────────────────────────────────────
+  {
+    name: '079_create_customer_payment_allocations',
+    timestamp: '079',
+    async up(conn) {
+      await conn.query(`
+        CREATE TABLE IF NOT EXISTS customer_payment_allocations (
+          id VARCHAR(50) NOT NULL,
+          customer_payment_id VARCHAR(255) NOT NULL,
+          invoice_id VARCHAR(50) NOT NULL,
+          amount_allocated DECIMAL(10,2) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          KEY customer_payment_id (customer_payment_id),
+          KEY invoice_id (invoice_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      `);
+      console.log('  Created customer_payment_allocations table');
+    }
+  },
+
+  // ── 080 ──────────────────────────────────────────────────────────────────
+  {
+    name: '080_add_bir_customer_classification',
+    timestamp: '2026-06-01_10-00-00',
+    async up(conn) {
+      const columnsToAdd = [
+        ['is_senior_citizen', 'BOOLEAN DEFAULT FALSE'],
+        ['osca_id', 'VARCHAR(100)'],
+        ['sc_tin', 'VARCHAR(100)'],
+        ['is_pwd', 'BOOLEAN DEFAULT FALSE'],
+        ['pwd_id', 'VARCHAR(100)'],
+        ['pwd_tin', 'VARCHAR(100)'],
+        ['is_naac', 'BOOLEAN DEFAULT FALSE'],
+        ['pnstm_id', 'VARCHAR(100)'],
+        ['is_solo_parent', 'BOOLEAN DEFAULT FALSE'],
+        ['spic_no', 'VARCHAR(100)'],
+        ['dependent_child_name', 'VARCHAR(255)'],
+        ['dependent_child_birthdate', 'DATE'],
+      ];
+      for (const [col, def] of columnsToAdd) {
+        if (!(await columnExists(conn, 'customers', col))) {
+          await conn.query(`ALTER TABLE customers ADD COLUMN ${col} ${def}`);
+        }
+      }
+      console.log('  Added BIR classification columns to customers');
+
+      // Indexes for filtering by classification (ignore if already present)
+      const indexes = [
+        ['idx_is_senior_citizen', 'is_senior_citizen'],
+        ['idx_is_pwd', 'is_pwd'],
+        ['idx_is_naac', 'is_naac'],
+        ['idx_is_solo_parent', 'is_solo_parent'],
+      ];
+      for (const [idx, col] of indexes) {
+        try {
+          await conn.query(`ALTER TABLE customers ADD INDEX ${idx} (${col})`);
+        } catch (e) {
+          if (e.errno !== 1061) throw e; // 1061 = duplicate key name
+        }
+      }
+      console.log('  Added BIR classification indexes to customers');
+    }
+  },
 ];
 
 async function run() {

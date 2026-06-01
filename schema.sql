@@ -219,6 +219,19 @@ CREATE TABLE IF NOT EXISTS `customer_payments` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE IF NOT EXISTS `customer_payment_allocations` (
+  `id` varchar(50) NOT NULL,
+  `customer_payment_id` varchar(255) NOT NULL,
+  `invoice_id` varchar(50) NOT NULL,
+  `amount_allocated` decimal(10,2) NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `customer_payment_id` (`customer_payment_id`),
+  KEY `invoice_id` (`invoice_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE IF NOT EXISTS `customers` (
   `id` varchar(50) NOT NULL,
   `name` varchar(255) NOT NULL,
@@ -236,10 +249,26 @@ CREATE TABLE IF NOT EXISTS `customers` (
   `sales_area` varchar(100) DEFAULT NULL,
   `sales_group` varchar(100) DEFAULT NULL,
   `price_level_id` varchar(50) DEFAULT NULL,
+  `is_senior_citizen` tinyint(1) DEFAULT '0',
+  `osca_id` varchar(100) DEFAULT NULL,
+  `sc_tin` varchar(100) DEFAULT NULL,
+  `is_pwd` tinyint(1) DEFAULT '0',
+  `pwd_id` varchar(100) DEFAULT NULL,
+  `pwd_tin` varchar(100) DEFAULT NULL,
+  `is_naac` tinyint(1) DEFAULT '0',
+  `pnstm_id` varchar(100) DEFAULT NULL,
+  `is_solo_parent` tinyint(1) DEFAULT '0',
+  `spic_no` varchar(100) DEFAULT NULL,
+  `dependent_child_name` varchar(255) DEFAULT NULL,
+  `dependent_child_birthdate` date DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_name` (`name`),
   KEY `idx_contact_number` (`contact_number`),
   KEY `fk_customer_price_level` (`price_level_id`),
+  KEY `idx_is_senior_citizen` (`is_senior_citizen`),
+  KEY `idx_is_pwd` (`is_pwd`),
+  KEY `idx_is_naac` (`is_naac`),
+  KEY `idx_is_solo_parent` (`is_solo_parent`),
   CONSTRAINT `fk_customer_price_level` FOREIGN KEY (`price_level_id`) REFERENCES `price_levels` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

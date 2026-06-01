@@ -47,7 +47,7 @@ type PointsFormValues = z.infer<typeof pointsSchema>;
 type CardInputFormValues = z.infer<typeof cardInputSchema>;
 type LoyaltyView = 'menu' | 'add' | 'withdraw' | 'balance' | 'input-card';
 
-function AdjustPointsForm({
+export function AdjustPointsForm({
   customer: initialCustomer,
   onFinished,
   hideAdjustments,

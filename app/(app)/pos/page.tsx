@@ -7,7 +7,6 @@ import { useLiveRefresh, dispatchStockUpdate } from '@/hooks/use-live-refresh';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -48,6 +47,9 @@ import {
   RefreshCw,
   Files,
   Monitor,
+  FilePenLine,
+  Banknote,
+  ArrowRight,
 } from 'lucide-react';
 import type { Product, Customer, ZReadingData } from '@/lib/types';
 import Link from 'next/link';
@@ -203,8 +205,14 @@ export type SaleItem = Product & {
 
 const initialItems: SaleItem[] = [];
 
-function CurrencyIcon() {
-  return <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M10 18v-4H6.816c-.422 0-.645-.24-.868-.617c-.223-.377-.28-.702-.28-1.383V7H4V5h4v4h3.184c.422 0 .645.24.868.617c-.223-.377-.28.702-.28 1.383v.831c0 .68-.057 1.006-.28 1.383c-.223.377-.446.617-.868.617H12v4zm2-6.831c0-.491.062-.83.184-1.018c.123-.188.31-.35.564-.515c.254-.166.52-.28.802-.344V7h2V5h-4v3.831c.491.062.83.184 1.018.366c.188.182.35.436.515.762c.166.326.28.675.344 1.047h2v2h-2c-.062.372-.184.72-.366 1.047c-.326-.182-.58-.436-.762-.762c-.182-.326-.304-.675-.366-1.047z" /></svg>
+// Cash with a right-pointing arrow — "cash transfer / money out"
+function CashTransferIcon({ className }: { className?: string }) {
+  return (
+    <span className={`relative inline-flex items-center justify-center ${className ?? ''}`}>
+      <Banknote className="h-full w-full" />
+      <ArrowRight className="absolute -bottom-1 -right-1.5 h-3 w-3" strokeWidth={3} />
+    </span>
+  );
 }
 
 import { useProducts } from '@/hooks/use-api';
@@ -368,6 +376,18 @@ function POSPageContent() {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  // Inline QTY editing in the items table
+  const [editingQtyItemId, setEditingQtyItemId] = useState<string | null>(null);
+  const [editingQtyValue, setEditingQtyValue] = useState('');
+  const qtyEditInputRef = useRef<HTMLInputElement>(null);
+  // Inline PRICE editing in the items table
+  const [editingPriceItemId, setEditingPriceItemId] = useState<string | null>(null);
+  const [editingPriceValue, setEditingPriceValue] = useState('');
+  const pendingPriceEditIdRef = useRef<string | null>(null);
+  const priceEditInputRef = useRef<HTMLInputElement>(null);
+  // Inline NAME (description) editing in the items table
+  const [editingNameItemId, setEditingNameItemId] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState('');
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
   const [isCollisionOpen, setIsCollisionOpen] = useState(false);
   const [collisionShift, setCollisionShift] = useState<any>(null);
@@ -1075,10 +1095,35 @@ function POSPageContent() {
     handleOpenTender(cashMethod ? cashMethod.name : (paymentMethods.length > 0 ? paymentMethods[0].name : 'CASH'));
   };
 
+  const startNameEdit = (itemId: string) => {
+    const it = items.find(i => i.id === itemId);
+    if (!it) return;
+    setSelectedItemId(itemId);
+    setEditingNameItemId(itemId);
+    setEditingNameValue(it.name);
+  };
+
+  const commitNameEdit = () => {
+    if (!editingNameItemId) return;
+    const trimmed = editingNameValue.trim();
+    const it = items.find(i => i.id === editingNameItemId);
+    if (it && trimmed.length > 0 && trimmed !== it.name) {
+      handleUpdateItem(editingNameItemId, trimmed, it.quantity, it.price, it.discount);
+    }
+    setEditingNameItemId(null);
+    setEditingNameValue('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const cancelNameEdit = () => {
+    setEditingNameItemId(null);
+    setEditingNameValue('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
   const handleOpenEditDialog = () => {
     if (selectedItem) {
-      setEditDialogMode('full');
-      setIsEditItemOpen(true);
+      startNameEdit(selectedItem.id);
     } else {
       toast({
         title: "No Item Selected",
@@ -1087,6 +1132,14 @@ function POSPageContent() {
       });
     }
   };
+
+  // Cleanup if the name-edited item is removed from the cart
+  useEffect(() => {
+    if (editingNameItemId && !items.find(i => i.id === editingNameItemId)) {
+      setEditingNameItemId(null);
+      setEditingNameValue('');
+    }
+  }, [items, editingNameItemId]);
 
   const handleOpenDiscountDialog = () => {
     if (selectedItem) {
@@ -1119,9 +1172,35 @@ function POSPageContent() {
   };
 
 
+  const startQtyEdit = (itemId: string) => {
+    const it = items.find(i => i.id === itemId);
+    if (!it) return;
+    setSelectedItemId(itemId);
+    setEditingQtyItemId(itemId);
+    setEditingQtyValue(String(it.quantity));
+  };
+
+  const commitQtyEdit = () => {
+    if (!editingQtyItemId) return;
+    const v = parseFloat(editingQtyValue);
+    if (!Number.isNaN(v) && v > 0) {
+      updateQuantity(editingQtyItemId, v);
+    }
+    setEditingQtyItemId(null);
+    setEditingQtyValue('');
+    // Return focus to the main scan input for the next action
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const cancelQtyEdit = () => {
+    setEditingQtyItemId(null);
+    setEditingQtyValue('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
   const handleOpenQuantityDialog = () => {
     if (selectedItem) {
-      setIsQuantityDialogOpen(true);
+      startQtyEdit(selectedItem.id);
     } else {
       toast({
         title: "No Item Selected",
@@ -1130,6 +1209,14 @@ function POSPageContent() {
       });
     }
   };
+
+  // Cleanup if the edited item is removed from the cart
+  useEffect(() => {
+    if (editingQtyItemId && !items.find(i => i.id === editingQtyItemId)) {
+      setEditingQtyItemId(null);
+      setEditingQtyValue('');
+    }
+  }, [items, editingQtyItemId]);
 
   const handleHold = () => {
     if (items.length > 0) {
@@ -1482,13 +1569,45 @@ function POSPageContent() {
     handleLogout();
   }
 
+  const startPriceEdit = (itemId: string) => {
+    const it = items.find(i => i.id === itemId);
+    if (!it) return;
+    setSelectedItemId(itemId);
+    setEditingPriceItemId(itemId);
+    setEditingPriceValue(it.price.toFixed(2));
+  };
+
+  const commitPriceEdit = () => {
+    if (!editingPriceItemId) return;
+    const v = parseFloat(editingPriceValue);
+    const it = items.find(i => i.id === editingPriceItemId);
+    if (it && !Number.isNaN(v) && v >= 0) {
+      handleUpdateItem(editingPriceItemId, it.name, it.quantity, v, it.discount);
+    }
+    setEditingPriceItemId(null);
+    setEditingPriceValue('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const cancelPriceEdit = () => {
+    setEditingPriceItemId(null);
+    setEditingPriceValue('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const requestPriceEditForItem = (itemId: string) => {
+    setSelectedItemId(itemId);
+    pendingPriceEditIdRef.current = itemId;
+    if (businessSettings?.enablePriceEditAuth) {
+      setIsPriceEditAuthOpen(true);
+    } else {
+      startPriceEdit(itemId);
+    }
+  };
+
   const handleRequestPriceEdit = () => {
     if (selectedItem) {
-      if (businessSettings?.enablePriceEditAuth) {
-          setIsPriceEditAuthOpen(true);
-      } else {
-         setIsPriceEditOpen(true);
-      }
+      requestPriceEditForItem(selectedItem.id);
     } else {
       toast({
         title: "No Item Selected",
@@ -1506,8 +1625,30 @@ function POSPageContent() {
 
   const handlePriceEditAuthSuccess = () => {
     setIsPriceEditAuthOpen(false);
-    setIsPriceEditOpen(true);
+    const id = pendingPriceEditIdRef.current || selectedItemId;
+    pendingPriceEditIdRef.current = null;
+    if (id) startPriceEdit(id);
   };
+
+  // Cleanup if the price-edited item is removed from the cart
+  useEffect(() => {
+    if (editingPriceItemId && !items.find(i => i.id === editingPriceItemId)) {
+      setEditingPriceItemId(null);
+      setEditingPriceValue('');
+    }
+  }, [items, editingPriceItemId]);
+
+  // Force focus + select on the price input when an edit starts.
+  // Needed because Radix restores focus to the auth dialog's trigger on close,
+  // which would steal focus from the Input's autoFocus.
+  useEffect(() => {
+    if (!editingPriceItemId) return;
+    const t = setTimeout(() => {
+      priceEditInputRef.current?.focus();
+      priceEditInputRef.current?.select();
+    }, 120);
+    return () => clearTimeout(t);
+  }, [editingPriceItemId]);
 
 
   const handleSelectCustomer = (customer: Customer | null) => {
@@ -1568,7 +1709,6 @@ function POSPageContent() {
   }, [items]);
 
   // Derived for display
-  const subTotal = taxDetails.subTotal;
   const vatSales = taxDetails.vatSales;
   const vatAmount = taxDetails.vatAmount;
   const numberOfItems = items.reduce((acc, item) => acc + item.quantity, 0);
@@ -1646,29 +1786,29 @@ function POSPageContent() {
   const customerPoints = (selectedCustomer as any)?.current_points || (selectedCustomer as any)?.loyaltyPoints || 0;
   const customerPointsValue = Number(customerPoints) * pointsRate;
 
-  // Header Actions
+  // Header Actions — neutral buttons, colored icons (enterprise look)
   const headerActions = [
-    { icon: Pencil, label: 'Edit Item', fKey: 'F1', action: handleOpenEditDialog, className: "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-100 hover:border-blue-200" },
-    { icon: X, label: 'Line Void', fKey: 'F2', action: handleCancelSale, className: "bg-red-50 text-red-700 hover:bg-red-100 border-red-100 hover:border-red-200" },
-    { icon: Percent, label: 'Discount', fKey: 'F3', action: handleOpenDiscountDialog, className: "bg-green-50 text-green-700 hover:bg-green-100 border-green-100 hover:border-green-200" },
-    { icon: Tag, label: 'Suspend', fKey: 'F4', action: handleHold, className: "bg-orange-50 text-orange-800 hover:bg-orange-100 border-orange-100 hover:border-orange-200" },
-    { icon: ListOrdered, label: 'Suspended', fKey: 'F5', action: () => setIsHeldTransOpen(true), className: "bg-orange-50 text-orange-800 hover:bg-orange-100 border-orange-100 hover:border-orange-200" },
-    { icon: Plus, label: 'Quantity', fKey: 'F6', action: handleOpenQuantityDialog, className: "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100 hover:border-indigo-200" },
-    { icon: CurrencyIcon, label: 'Edit Price', fKey: 'F7', action: handleRequestPriceEdit, className: "bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-100 hover:border-purple-200" },
-    { icon: Power, label: shiftActive ? 'Endorse/Out' : 'Shutdown', fKey: 'F8', action: handleShutdown, className: "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-100 hover:border-slate-200" },
+    { icon: Pencil, label: 'Edit Item', fKey: 'F1', action: handleOpenEditDialog, iconColor: "text-blue-600" },
+    { icon: X, label: 'Line Void', fKey: 'F2', action: handleCancelSale, iconColor: "text-red-600" },
+    { icon: Percent, label: 'Discount', fKey: 'F3', action: handleOpenDiscountDialog, iconColor: "text-emerald-600" },
+    { icon: Tag, label: 'Suspend', fKey: 'F4', action: handleHold, iconColor: "text-amber-600" },
+    { icon: ListOrdered, label: 'Suspended', fKey: 'F5', action: () => setIsHeldTransOpen(true), iconColor: "text-orange-600" },
+    { icon: Plus, label: 'Quantity', fKey: 'F6', action: handleOpenQuantityDialog, iconColor: "text-indigo-600" },
+    { icon: FilePenLine, label: 'Edit Price', fKey: 'F7', action: handleRequestPriceEdit, iconColor: "text-purple-600" },
+    { icon: Power, label: shiftActive ? 'Endorse/Out' : 'Shutdown', fKey: 'F8', action: handleShutdown, iconColor: "text-slate-500" },
   ];
 
   const footerActions = [
-    { icon: Printer, label: 'Cash count', shortcut: 'Ctrl+1', action: handleOpenEndShift },
-    { icon: CurrencyIcon, label: 'Cash transfer', shortcut: 'Ctrl+2', action: () => setIsCashTransferOpen(true) },
-    { icon: User, label: 'Customer', shortcut: 'Ctrl+3', action: () => setIsCustomerSelectOpen(true) },
-    { icon: Star, label: 'Loyalty', shortcut: 'Ctrl+4', action: handleOpenLoyalty },
-    { icon: Clock, label: 'Recent Sales', shortcut: 'Ctrl+5', action: () => setIsRecentSalesOpen(true) },
-    { icon: Ban, label: 'Post Void', shortcut: 'Ctrl+6', action: () => setIsVoidSalesOpen(true) },
-    { icon: Undo, label: 'Merch Credit', shortcut: 'Ctrl+7', action: () => setIsReturnSalesOpen(true) },
-    { icon: Files, label: 'OVERALL', shortcut: 'Ctrl+8', action: handleOpenOverallReading },
-    { icon: BookOpen, label: 'Z-READING', shortcut: 'Ctrl+0', action: () => setIsZReadingOpen(true) },
-    { icon: Search, label: 'Price Inquiry', shortcut: 'Ctrl+P', action: () => setIsPriceInquiryOpen(true) },
+    { icon: Printer, label: 'Cash count', shortcut: 'Ctrl+1', action: handleOpenEndShift, iconColor: "text-emerald-600" },
+    { icon: CashTransferIcon, label: 'Cash transfer', shortcut: 'Ctrl+2', action: () => setIsCashTransferOpen(true), iconColor: "text-teal-600" },
+    { icon: User, label: 'Customer', shortcut: 'Ctrl+3', action: () => setIsCustomerSelectOpen(true), iconColor: "text-sky-600" },
+    { icon: Star, label: 'Loyalty', shortcut: 'Ctrl+4', action: handleOpenLoyalty, iconColor: "text-amber-500" },
+    { icon: Clock, label: 'Recent Sales', shortcut: 'Ctrl+5', action: () => setIsRecentSalesOpen(true), iconColor: "text-blue-600" },
+    { icon: Ban, label: 'Post Void', shortcut: 'Ctrl+6', action: () => setIsVoidSalesOpen(true), iconColor: "text-rose-600" },
+    { icon: Undo, label: 'Merch Credit', shortcut: 'Ctrl+7', action: () => setIsReturnSalesOpen(true), iconColor: "text-orange-600" },
+    { icon: Files, label: 'OVERALL', shortcut: 'Ctrl+8', action: handleOpenOverallReading, iconColor: "text-violet-600" },
+    { icon: BookOpen, label: 'Z-READING', shortcut: 'Ctrl+0', action: () => setIsZReadingOpen(true), iconColor: "text-purple-600" },
+    { icon: Search, label: 'Price Inquiry', shortcut: 'Ctrl+P', action: () => setIsPriceInquiryOpen(true), iconColor: "text-cyan-600" },
   ];
 
   const paymentOptions = [
@@ -1678,11 +1818,6 @@ function POSPageContent() {
     { label: 'GIFT CHECK', value: 'GIFT_CHECK' },
     { label: 'POINTS', value: 'POINTS' },
   ];
-
-  const matteGreenButtons = ['Cash count', 'Cash transfer'];
-  const matteBlueButtons = ['Customer', 'Loyalty'];
-  const matteYellowButtons = ['Recent Sales', 'Post Void', 'Merch Credit'];
-  const mattePurpleButtons = ['Z-READING', 'Price Inquiry'];
 
 
 
@@ -1713,20 +1848,20 @@ function POSPageContent() {
           
           {/* Header Bar */}
           <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4 gap-4 justify-between shrink-0 z-10">
-             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mask-gradient-x flex-1">
-                {headerActions.map(({ icon: Icon, label, fKey, action, className }) => (
-                  <Button 
-                    key={label} 
-                    variant="ghost" 
+             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-gradient-x flex-1">
+                {headerActions.map(({ icon: Icon, label, fKey, action, iconColor }) => (
+                  <Button
+                    key={label}
+                    variant="ghost"
                     size="sm"
-                    className={`relative flex flex-col gap-0.5 h-12 min-w-[4.5rem] px-2 transition-all font-normal border ${className}`} 
+                    className="group relative flex flex-col items-center gap-0.5 h-12 min-w-[4.75rem] px-2 font-normal rounded-lg border border-border/60 bg-background hover:bg-muted hover:border-border hover:-translate-y-0.5 hover:shadow-sm transition-all"
                     onClick={action}
                   >
-                    <Icon className="w-4 h-4 mb-0.5" />
-                    <span className="text-[10px] leading-none font-medium text-center">{label}</span>
-                    <span className="text-[9px] text-black leading-none font-mono opacity-100">{fKey}</span>
+                    <Icon className={`w-[18px] h-[18px] ${iconColor} transition-transform group-hover:scale-110`} />
+                    <span className="text-[10px] leading-none font-medium text-center text-foreground/80">{label}</span>
+                    <kbd className="pointer-events-none mt-0.5 inline-flex items-center rounded border border-border/70 bg-muted px-1 text-[8px] font-mono font-medium leading-tight text-muted-foreground">{fKey}</kbd>
                     {label === 'Suspended' && heldTransactions.length > 0 && (
-                      <span className="absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white shadow-sm ring-1 ring-white/50">
+                      <span className="absolute top-0.5 right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white shadow-sm ring-1 ring-background">
                         {heldTransactions.length}
                       </span>
                     )}
@@ -1802,31 +1937,6 @@ function POSPageContent() {
                   </Button>
                 </div>
 
-                <div 
-                  className="flex items-center gap-2 bg-background border border-muted-foreground/20 rounded-md px-3 h-12 shadow-sm min-w-[200px] cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => setIsCustomerSelectOpen(true)}
-                >
-                    <User className="h-4 w-4 text-primary" />
-                    <div className="flex-1 overflow-hidden">
-                        <div className="flex items-center gap-1.5">
-                            <div className="text-xs text-muted-foreground">Customer</div>
-                        </div>
-                        <div className="text-sm font-medium truncate">{selectedCustomer?.name || 'Walk-in'}</div>
-                    </div>
-                    {selectedCustomer?.id !== 'walk-in' && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 -mr-1" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectCustomer(WALK_IN_CUSTOMER);
-                          }}
-                        >
-                            <X className="h-3 w-3" />
-                        </Button>
-                    )}
-                </div>
              </div>
 
              {/* Items Table */}
@@ -1872,23 +1982,106 @@ function POSPageContent() {
                                         <div className={`w-2 h-2 rounded-full ${selectedItemId === item.id ? 'bg-primary' : 'bg-transparent border border-muted-foreground/30'}`} />
                                     </TableCell>
                                     <TableCell>
-                                        <div className="flex flex-col">
-                                            <span className="font-medium text-sm">{item.name}</span>
-                                            {item.discount > 0 && <span className="text-[10px] text-green-600 font-medium">Discount: {item.discount}%</span>}
-                                        </div>
+                                        {editingNameItemId === item.id ? (
+                                            <Input
+                                                autoFocus
+                                                value={editingNameValue}
+                                                onChange={(e) => setEditingNameValue(e.target.value)}
+                                                onFocus={(e) => { const t = e.target; setTimeout(() => t.select(), 0); }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                onBlur={commitNameEdit}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commitNameEdit(); }
+                                                    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelNameEdit(); }
+                                                    else { e.stopPropagation(); }
+                                                }}
+                                                className="h-8 px-2 text-sm font-medium ring-2 ring-primary/40"
+                                            />
+                                        ) : (
+                                            <div className="flex flex-col">
+                                                <span
+                                                    onClick={(e) => { e.stopPropagation(); startNameEdit(item.id); }}
+                                                    className="inline-block w-fit px-2 py-1 -mx-2 text-sm font-medium rounded cursor-text hover:bg-muted hover:ring-1 hover:ring-border transition-colors"
+                                                    title="Click to edit · F1"
+                                                >
+                                                    {item.name}
+                                                </span>
+                                                {item.discount > 0 && <span className="text-[10px] text-green-600 dark:text-green-400 font-medium ml-1 mt-0.5">Discount: {item.discount}%</span>}
+                                            </div>
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-left text-sm text-muted-foreground">
                                         {item.unitOfMeasure}
                                     </TableCell>
-                                    <TableCell className="text-right font-mono text-sm group">
-                                        <div className="flex flex-col items-end">
-                                            <span>₱{item.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                                            {/* Tiered Pricing Label Removed */}
-                                        </div>
+                                    <TableCell className="text-right font-mono text-sm">
+                                        {editingPriceItemId === item.id ? (
+                                            <div className="flex items-center justify-end gap-1">
+                                                <span className="text-muted-foreground">₱</span>
+                                                <Input
+                                                    ref={priceEditInputRef}
+                                                    autoFocus
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={editingPriceValue}
+                                                    onChange={(e) => {
+                                                        const v = e.target.value;
+                                                        if (v === '' || /^\d*\.?\d*$/.test(v)) setEditingPriceValue(v);
+                                                    }}
+                                                    onFocus={(e) => { const t = e.target; setTimeout(() => t.select(), 0); }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onBlur={commitPriceEdit}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commitPriceEdit(); }
+                                                        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelPriceEdit(); }
+                                                        else { e.stopPropagation(); }
+                                                    }}
+                                                    className="h-8 w-24 px-2 text-right font-mono text-sm font-semibold ring-2 ring-primary/40"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-end">
+                                                <span
+                                                    onClick={(e) => { e.stopPropagation(); requestPriceEditForItem(item.id); }}
+                                                    className="inline-block px-2 py-1 rounded cursor-text hover:bg-muted hover:ring-1 hover:ring-border transition-colors"
+                                                    title="Click to edit price · F7"
+                                                >
+                                                    ₱{item.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        )}
                                     </TableCell>
                                     <TableCell className="p-0">
-                                        <div className="flex items-center justify-center gap-1 h-full">
-                                            <span className="w-8 text-center font-mono text-sm font-medium">{formatStockQuantity(item.quantity)}</span>
+                                        <div className="flex items-center justify-center h-full">
+                                            {editingQtyItemId === item.id ? (
+                                                <Input
+                                                    ref={qtyEditInputRef}
+                                                    autoFocus
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={editingQtyValue}
+                                                    onChange={(e) => {
+                                                        const v = e.target.value;
+                                                        if (v === '' || /^\d*\.?\d*$/.test(v)) setEditingQtyValue(v);
+                                                    }}
+                                                    onFocus={(e) => { const t = e.target; setTimeout(() => t.select(), 0); }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onBlur={commitQtyEdit}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commitQtyEdit(); }
+                                                        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelQtyEdit(); }
+                                                        else { e.stopPropagation(); }
+                                                    }}
+                                                    className="h-8 w-20 px-2 text-center font-mono text-sm font-semibold ring-2 ring-primary/40"
+                                                />
+                                            ) : (
+                                                <span
+                                                    onClick={(e) => { e.stopPropagation(); startQtyEdit(item.id); }}
+                                                    className="inline-block min-w-[2rem] px-2 py-1 text-center font-mono text-sm font-medium rounded cursor-text hover:bg-muted hover:ring-1 hover:ring-border transition-colors"
+                                                    title="Click to edit · F6"
+                                                >
+                                                    {formatStockQuantity(item.quantity)}
+                                                </span>
+                                            )}
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right font-mono font-medium">
@@ -1905,24 +2098,19 @@ function POSPageContent() {
              </div>
              
              {/* Footer Actions */}
-            <div className="grid grid-cols-9 gap-2 shrink-0 h-16">
-                {footerActions.map(({ icon: Icon, label, shortcut, action }) => (
+            <div className="grid grid-cols-10 gap-2 shrink-0 h-16">
+                {footerActions.map(({ icon: Icon, label, shortcut, action, iconColor }) => (
                     <Button
                         key={label}
-                        variant="secondary"
+                        variant="ghost"
                         onClick={action}
-                        className={`
-                            flex flex-col items-center justify-center gap-1 h-full text-xs font-medium border transition-all hover:-translate-y-0.5
-                            ${matteGreenButtons.includes(label) ? 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200' : ''}
-                            ${matteBlueButtons.includes(label) ? 'bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-200' : ''}
-                            ${matteYellowButtons.includes(label) ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200' : ''}
-                            ${mattePurpleButtons.includes(label) ? 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200' : ''}
-                            ${!matteGreenButtons.includes(label) && !matteBlueButtons.includes(label) && !matteYellowButtons.includes(label) && !mattePurpleButtons.includes(label) ? 'bg-background hover:bg-muted' : ''}
-                        `}
+                        className="group flex flex-col items-center justify-center gap-1 h-full px-1 text-xs font-medium rounded-lg border border-border/60 bg-background hover:bg-muted hover:border-border hover:-translate-y-0.5 hover:shadow-sm transition-all"
                     >
-                        <Icon className="w-5 h-5 opacity-80" />
-                        <span className="leading-tight text-center px-1">{label}</span>
-                        {shortcut && <span className="text-[9px] text-black font-mono">{shortcut}</span>}
+                        <Icon className={`w-5 h-5 ${iconColor} transition-transform group-hover:scale-110`} />
+                        <span className="leading-tight text-center text-foreground/80">{label}</span>
+                        {shortcut && (
+                            <kbd className="pointer-events-none inline-flex items-center rounded border border-border/70 bg-muted px-1 text-[8px] font-mono font-medium leading-tight text-muted-foreground">{shortcut}</kbd>
+                        )}
                     </Button>
                 ))}
             </div>
@@ -1932,117 +2120,145 @@ function POSPageContent() {
 
         {/* Right Section: Totals & Payments */}
         <div className="w-96 bg-background border-l shadow-2xl z-20 flex flex-col h-full">
-            {/* Cashier Profile */}
-            <div className="border-b flex flex-col items-center bg-muted/10">
-                 <div className="bg-primary text-white py-8 w-full flex items-center justify-center mb-6 shadow-[0_10px_25px_-5px_hsl(var(--primary)/0.4)]">
-                     <span className="text-4xl uppercase font-black leading-none tracking-widest text-center drop-shadow-lg">{businessSettings?.businessName || 'STOCK PILOT'}</span>
-                 </div>
-                 <div className="text-center px-6 pb-6">
-                    <h2 className="font-bold text-lg leading-none">{currentUser?.displayName || 'Cashier Terminal'}</h2>
-                    <p className="text-xs text-muted-foreground mt-1 font-mono">{currentTerminalName}</p>
-                 </div>
-            </div>
-
-            {/* Big Total */}
-            <div className="flex-1 flex flex-col p-6 gap-6 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
-                
-                <div className="space-y-2 text-center z-10">
-                    <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Total Amount Due</span>
-                    <div className="flex items-start justify-center text-7xl font-bold tracking-tighter text-primary">
-                        <span className="text-2xl mt-2 mr-1">₱</span>
-                        {totalDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                    </div>
-                    {/* Detailed Breakdown Card */}
-                    <Card className="mx-4 mt-12 bg-background border shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)]">
-                        <CardContent className="p-4">
-                            <div className="grid grid-cols-1 gap-y-2 text-sm text-muted-foreground">
-                                <div className="flex justify-between">
-                                    <span>Sub total:</span>
-                                    <span className="font-mono">{subTotal.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Vat Sales:</span>
-                                    <span className="font-mono">{vatSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Sub discount:</span>
-                                    {/* Placeholder logic for discount sum if needed, typically difference between gross and net if not per item stored */}
-                                    <span className="font-mono">{(items.reduce((acc, item) => acc + item.price * item.quantity, 0) - totalDue).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Vat amount:</span>
-                                    <span className="font-mono">{vatAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                                 </div>
-                                 <div className="flex justify-between font-bold text-foreground">
-                                    <span>Amount due:</span>
-                                    <span className="font-mono text-primary">{totalDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Non-vat sales:</span>
-                                    <span className="font-mono">{taxDetails.nonVatSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                 <div className="flex justify-between">
-                                     {/* Divider / Spacer */}
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>No of Items:</span>
-                                    <span className="font-mono">{numberOfItems}</span>
-                                </div>
-                                
-                                 <div className="flex justify-between">
-                                    <span>Vat-Exempt sales:</span>
-                                    <span className="font-mono">{taxDetails.vatExemptSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                 <div className="flex justify-between">
-                                     <span>Zero-Rated Sales:</span>
-                                     <span className="font-mono">{taxDetails.zeroRatedSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+            {/* Brand + Cashier Header */}
+            <div className="shrink-0">
+                <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground px-6 py-4 flex items-center justify-between gap-3 shadow-[0_10px_28px_-8px_hsl(var(--primary)/0.6)]">
+                    <div className="absolute inset-x-0 top-0 h-1/2 bg-white/10 pointer-events-none" />
+                    <span className="relative text-xl font-black uppercase tracking-widest leading-none truncate drop-shadow-sm">
+                        {businessSettings?.businessName || 'STOCK PILOT'}
+                    </span>
                     {businessSettings?.logoPath && (
-                        <div className="flex justify-center mt-4">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img 
-                                src={businessSettings.logoPath} 
-                                alt="Business Logo" 
-                                className="w-24 h-24 object-contain"
-                            />
-                        </div>
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={businessSettings.logoPath} alt="" className="relative h-9 w-9 shrink-0 rounded-md bg-white/15 p-0.5 object-contain ring-1 ring-white/25" />
                     )}
                 </div>
+                <div className="flex items-center gap-3 px-6 py-3.5 border-b bg-muted/20">
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center ring-2 ring-primary/15 ring-offset-2 ring-offset-background">
+                        <User className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold leading-none truncate">{currentUser?.displayName || 'Cashier Terminal'}</p>
+                        <p className="text-[11px] text-muted-foreground font-mono mt-1 truncate">{currentTerminalName || 'No Terminal'}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <div className={`h-2 w-2 rounded-full ${shiftActive ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.7)] animate-pulse' : 'bg-red-500'}`} />
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{shiftActive ? 'Live' : 'Off'}</span>
+                    </div>
+                </div>
+            </div>
 
-                <div className="flex-1 flex flex-col justify-center gap-3">
-                    
-                     {/* Individual Payment Buttons Removed as per request to move selection to dialog */}
-                     {/* <div className="grid grid-cols-2 gap-3">
-                        {paymentMethods.filter(m => m.isActive).map((method) => (
-                            <Button
-                                key={method.id}
-                                variant="outline"
-                                onClick={() => handleOpenTender(method.name)}
-                                disabled={items.length === 0}
-                                className="h-16 flex flex-col items-center justify-center gap-1 border-muted-foreground/20 hover:border-primary hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary"
-                            >
-                                <span className="font-semibold">{method.name}</span>
-                            </Button>
-                        ))}
-                     </div> */}
+            {/* Customer + Price Level */}
+            <div className="flex items-center gap-2 px-6 py-3 border-b shrink-0">
+                <div
+                    onClick={() => setIsCustomerSelectOpen(true)}
+                    className="flex-1 min-w-0 flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-border/50 cursor-pointer transition-colors hover:bg-muted/60 hover:ring-primary/40"
+                >
+                    <User className="h-4 w-4 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                        <span className="block text-[10px] leading-none text-muted-foreground">Customer</span>
+                        <span className="mt-0.5 block truncate text-sm font-medium leading-tight">{selectedCustomer?.name || 'Walk-in'}</span>
+                    </div>
+                    {selectedCustomer?.id !== 'walk-in' && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="-mr-1 h-6 w-6 shrink-0"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectCustomer(WALK_IN_CUSTOMER);
+                            }}
+                        >
+                            <X className="h-3 w-3" />
+                        </Button>
+                    )}
+                </div>
+                <div className="shrink-0 rounded-lg bg-primary/10 text-primary px-3 py-2 text-xs font-semibold ring-1 ring-primary/20">
+                    {activeLevelName}
+                </div>
+            </div>
+
+            {/* Hero Total */}
+            <div className="relative px-6 pt-6 pb-4 shrink-0">
+                <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+                <div className="relative text-center">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.2em]">Total Amount Due</span>
+                    <div className="mt-1 flex items-start justify-center font-bold tracking-tighter text-primary">
+                        <span className="text-2xl mt-2 mr-1">₱</span>
+                        <span className="text-6xl leading-none tabular-nums">{totalDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <ShoppingCart className="h-3.5 w-3.5" />
+                        <span><span className="font-semibold text-foreground">{numberOfItems}</span> item{numberOfItems !== 1 ? 's' : ''} in cart</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Breakdown (scrollable) */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4 space-y-3">
+                {/* Sale Summary */}
+                <div className="rounded-xl border border-primary/10 bg-card p-4 shadow-sm">
+                    <div className="space-y-2.5">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Subtotal</span>
+                            <span className="font-mono tabular-nums">₱{items.reduce((acc, item) => acc + item.price * item.quantity, 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Discount</span>
+                            <span className="font-mono tabular-nums text-green-600">−₱{(items.reduce((acc, item) => acc + item.price * item.quantity, 0) - totalDue).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                    </div>
+                    <div className="-mx-4 mt-3 px-4 pt-3 border-t border-dashed flex justify-between items-baseline">
+                        <span className="text-sm font-semibold">Net Total</span>
+                        <span className="font-mono tabular-nums text-lg font-bold text-primary">₱{totalDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                </div>
+
+                {/* Tax Breakdown */}
+                <div className="rounded-xl border bg-muted/20 p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tax Breakdown</p>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">VATable Sales</span>
+                            <span className="font-mono tabular-nums">₱{vatSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">VAT (12%)</span>
+                            <span className="font-mono tabular-nums">₱{vatAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">VAT-Exempt</span>
+                            <span className="font-mono tabular-nums">₱{taxDetails.vatExemptSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Zero-Rated</span>
+                            <span className="font-mono tabular-nums">₱{taxDetails.zeroRatedSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Non-VAT</span>
+                            <span className="font-mono tabular-nums">₱{taxDetails.nonVatSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* Tender Button */}
-            <div className="p-6 bg-muted/10 border-t">
-                <Button 
-                    size="lg" 
-                    className="w-full h-20 text-2xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all rounded-xl"
+            <div className="p-5 bg-muted/10 border-t shrink-0">
+                <Button
+                    size="lg"
+                    className="w-full h-20 shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 transition-all rounded-xl flex items-center"
                     onClick={handleDefaultTender}
                     disabled={items.length === 0}
                 >
-                    <span className="flex-1 text-left pl-4">TENDER</span>
-                    <div className="bg-white/20 rounded-lg p-2 mr-2">
-                        <ChevronRight className="w-8 h-8" />
+                    <div className="flex-1 text-left pl-2">
+                        <span className="block text-2xl font-bold leading-none">TENDER</span>
+                        <span className="block text-[11px] font-normal opacity-80 mt-1">Cash · press Enter</span>
+                    </div>
+                    <div className="bg-white/20 rounded-lg px-3 py-2 mr-1 flex items-center gap-2">
+                        <span className="font-mono text-lg font-bold tabular-nums">₱{totalDue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                        <ChevronRight className="w-6 h-6" />
                     </div>
                 </Button>
             </div>

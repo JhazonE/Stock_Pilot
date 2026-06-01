@@ -5,13 +5,13 @@ import React, { useEffect, useState, useMemo, useCallback, Suspense } from 'reac
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useTheme } from 'next-themes';
 import { WindowControls } from '@/components/window-controls';
 import {
   SidebarProvider,
   Sidebar,
   SidebarHeader,
   SidebarContent,
-  SidebarTrigger,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -21,8 +21,11 @@ import {
   SidebarGroupLabel,
   SidebarInset,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import {
   LayoutDashboard,
@@ -44,6 +47,11 @@ import {
   Package2,
   ChartNoAxesCombined,
   ClipboardCheck,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  Laptop,
 } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { ChevronDown } from 'lucide-react';
@@ -132,6 +140,81 @@ const purchasesNavItems = [
 
 const queryClient = new QueryClient();
 
+function AnimatedHamburger() {
+  const { toggleSidebar, state } = useSidebar();
+  const isOpen = state === 'expanded';
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          aria-label="Toggle sidebar"
+          className="relative h-9 w-9 rounded-lg border border-transparent bg-background/40 hover:bg-accent hover:border-border hover:shadow-[0_0_0_3px_hsl(var(--primary)/0.15)] hover:ring-1 hover:ring-primary/30 transition-all duration-200 active:scale-95 group"
+        >
+          <span className="relative block h-4 w-5">
+            <span
+              className="absolute left-0 top-0 block h-[2px] w-5 origin-center rounded-full bg-foreground transition-transform duration-300 ease-out group-hover:bg-primary"
+              style={{ transform: isOpen ? 'none' : 'translateY(7px) rotate(45deg)' }}
+            />
+            <span
+              className="absolute left-0 top-[7px] block h-[2px] w-5 rounded-full bg-foreground transition-opacity duration-200 ease-out group-hover:bg-primary"
+              style={{ opacity: isOpen ? 1 : 0 }}
+            />
+            <span
+              className="absolute left-0 top-[14px] block h-[2px] w-5 origin-center rounded-full bg-foreground transition-transform duration-300 ease-out group-hover:bg-primary"
+              style={{ transform: isOpen ? 'none' : 'translateY(-7px) rotate(-45deg)' }}
+            />
+          </span>
+          <span className="sr-only">Toggle sidebar</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs">
+        {isOpen ? 'Collapse sidebar' : 'Expand sidebar'} <kbd className="ml-1 rounded border bg-muted px-1 py-0.5 text-[10px] font-mono">Ctrl B</kbd>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function SidebarThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const current = mounted ? (theme || 'system') : 'system';
+  const options: { key: 'light' | 'dark' | 'system'; icon: React.ElementType; label: string }[] = [
+    { key: 'light', icon: Sun, label: 'Light' },
+    { key: 'dark', icon: Moon, label: 'Dark' },
+    { key: 'system', icon: Laptop, label: 'System' },
+  ];
+  return (
+    <div className="px-2 pb-2 group-data-[collapsible=icon]:hidden">
+      <div className="flex items-center justify-between rounded-lg border border-sidebar-border/60 bg-sidebar-accent/30 p-1 shadow-inner">
+        {options.map(({ key, icon: Icon, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTheme(key)}
+            aria-label={label}
+            title={label}
+            className={`relative flex-1 flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all duration-200 ${
+              current === key
+                ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
+                : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline">{label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const normalizeText = (s: string) => s.toLowerCase().trim();
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -139,6 +222,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ email: string, permissions?: string[], userType?: string } | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [businessName, setBusinessName] = useState<string>('Stockpilot');
+  const [navSearch, setNavSearch] = useState('');
 
   const isPOSPage = pathname === '/pos' || pathname === '/pos/customer-display';
 
@@ -225,8 +309,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return email.substring(0, 2).toUpperCase();
   };
 
-  const filteredNavItems = navItems.filter(item => hasPermission(item.permission));
-  const filteredOtherNavItems = otherNavItems.filter(item => hasPermission(item.permission));
+  const matchesSearch = (label: string) => !navSearch || normalizeText(label).includes(normalizeText(navSearch));
+  const isSearching = navSearch.trim().length > 0;
+
+  const filteredNavItems = navItems.filter(item => hasPermission(item.permission) && matchesSearch(item.label));
+  const filteredOtherNavItems = otherNavItems.filter(item => hasPermission(item.permission) && matchesSearch(item.label));
+
+  const inventoryFiltered = matchesSearch('Inventory') ? inventoryNavItems : inventoryNavItems.filter(i => matchesSearch(i.label));
+  const salesFiltered = matchesSearch('Sales') ? salesNavItems : salesNavItems.filter(i => matchesSearch(i.label));
+  const customerFiltered = matchesSearch('Customers') ? customerNavItems : customerNavItems.filter(i => matchesSearch(i.label));
+  const purchasesFiltered = matchesSearch('Purchases') ? purchasesNavItems : purchasesNavItems.filter(i => matchesSearch(i.label));
+  const suppliersFiltered = matchesSearch('Suppliers') ? suppliersNavItems : suppliersNavItems.filter(i => matchesSearch(i.label));
+
+  const showInventoryGroup = hasPermission('manage_inventory') && inventoryFiltered.length > 0;
+  const showSalesGroup = hasPermission('view_sales') && salesFiltered.length > 0;
+  const showCustomerGroup = hasPermission('manage_customers') && customerFiltered.length > 0;
+  const showPurchasesGroup = hasPermission('manage_purchases') && purchasesFiltered.length > 0;
+  const showSuppliersGroup = hasPermission('manage_suppliers') && suppliersFiltered.length > 0;
+  const showOperationsGroup = showInventoryGroup || showSalesGroup || showCustomerGroup || showPurchasesGroup || showSuppliersGroup;
+  const hasAnyMatch = filteredNavItems.length > 0 || filteredOtherNavItems.length > 0 || showOperationsGroup;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -244,7 +345,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </SidebarHeader>
-        <SidebarContent className="px-3 py-6 gap-2 overflow-y-auto flex-1 group-data-[collapsible=icon]:px-0">
+        <SidebarContent className="px-3 py-4 gap-2 overflow-y-auto flex-1 group-data-[collapsible=icon]:px-0">
+          <div className="px-2 mb-2 group-data-[collapsible=icon]:hidden">
+            <div className="relative group/search">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within/search:text-primary transition-colors" />
+              <Input
+                value={navSearch}
+                onChange={(e) => setNavSearch(e.target.value)}
+                placeholder="Search menu..."
+                className="h-8 pl-8 pr-7 text-[12px] bg-sidebar-accent/30 border-sidebar-border/60 focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:bg-background transition-all"
+              />
+              {navSearch && (
+                <button
+                  type="button"
+                  onClick={() => setNavSearch('')}
+                  aria-label="Clear search"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 h-5 w-5 inline-flex items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          </div>
           {filteredNavItems.length > 0 && (
             <SidebarGroup>
               <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Platform</SidebarGroupLabel>
@@ -255,7 +377,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       <SidebarMenuButton
                         isActive={pathname === item.href}
                         tooltip={{ children: item.label }}
-                        className="gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm"
+                        className="group/nav relative gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm hover:translate-x-0.5 hover:bg-sidebar-accent/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-0 before:bg-primary before:rounded-r-full before:transition-all before:duration-300 data-[active=true]:before:h-2/3 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/20 data-[active=true]:via-primary/10 data-[active=true]:to-transparent data-[active=true]:text-primary data-[active=true]:shadow-sm [&_svg]:transition-transform [&_svg]:duration-200 hover:[&_svg]:scale-110 data-[active=true]:[&_svg]:text-primary"
                       >
                         <item.icon />
                         <span className="text-[14px]">{item.label}</span>
@@ -267,20 +389,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarGroup>
           )}
 
-          {(hasPermission('manage_inventory') || hasPermission('view_sales') || hasPermission('manage_customers') || hasPermission('manage_purchases') || hasPermission('manage_suppliers')) && (
+          {showOperationsGroup && (
             <SidebarGroup>
               <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.1em] font-bold text-muted-foreground/80 px-4 mb-3">Operations</SidebarGroupLabel>
 
             <SidebarMenu>
 
-              {hasPermission('manage_inventory') && (
+              {showInventoryGroup && (
                 <SidebarMenuItem>
-                  <Collapsible defaultOpen={isInventoryPage} className="group/collapsible group-data-[collapsible=icon]:items-center">
+                  <Collapsible defaultOpen={isInventoryPage} open={isSearching ? true : undefined} className="group/collapsible group-data-[collapsible=icon]:items-center">
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton
                         isActive={isInventoryPage}
                         tooltip={{ children: "Inventory" }}
-                        className="justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm"
+                        className="group/nav relative justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm hover:translate-x-0.5 hover:bg-sidebar-accent/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-0 before:bg-primary before:rounded-r-full before:transition-all before:duration-300 data-[active=true]:before:h-2/3 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/15 data-[active=true]:via-primary/5 data-[active=true]:to-transparent data-[active=true]:shadow-sm [&_>div_svg]:transition-transform [&_>div_svg]:duration-200 hover:[&_>div_svg]:scale-110 data-[active=true]:[&_>div_svg]:text-primary"
                       >
                         <div className="flex items-center gap-3">
                           <Warehouse />
@@ -291,9 +413,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub className="ml-5 border-l-2 border-sidebar-border/40 pl-3 my-2 space-y-1">
-                        {inventoryNavItems.map((item) => (
+                        {inventoryFiltered.map((item) => (
                           <SidebarMenuItem key={item.href}>
-                            <SidebarMenuSubButton asChild isActive={pathname === item.href} className="text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 transition-colors duration-200">
+                            <SidebarMenuSubButton asChild isActive={pathname === item.href} className="relative text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 hover:translate-x-0.5 transition-all duration-200 data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-semibold">
                               <Link href={item.href}>{item.label}</Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuItem>
@@ -304,14 +426,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenuItem>
               )}
 
-              {hasPermission('view_sales') && (
+              {showSalesGroup && (
                 <SidebarMenuItem>
-                  <Collapsible defaultOpen={isSalesPage} className="group/collapsible">
+                  <Collapsible defaultOpen={isSalesPage} open={isSearching ? true : undefined} className="group/collapsible">
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton
                         isActive={isSalesPage}
                         tooltip={{ children: "Sales" }}
-                        className="justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm"
+                        className="group/nav relative justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm hover:translate-x-0.5 hover:bg-sidebar-accent/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-0 before:bg-primary before:rounded-r-full before:transition-all before:duration-300 data-[active=true]:before:h-2/3 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/15 data-[active=true]:via-primary/5 data-[active=true]:to-transparent data-[active=true]:shadow-sm [&_>div_svg]:transition-transform [&_>div_svg]:duration-200 hover:[&_>div_svg]:scale-110 data-[active=true]:[&_>div_svg]:text-primary"
                       >
                          <div className="flex items-center gap-3">
                           <ChartNoAxesCombined />
@@ -322,9 +444,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub className="ml-5 border-l-2 border-sidebar-border/40 pl-3 my-2 space-y-1">
-                        {salesNavItems.map((item) => (
+                        {salesFiltered.map((item) => (
                           <SidebarMenuItem key={item.href}>
-                             <SidebarMenuSubButton asChild isActive={pathname === item.href} className="text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 transition-colors duration-200">
+                             <SidebarMenuSubButton asChild isActive={pathname === item.href} className="relative text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 hover:translate-x-0.5 transition-all duration-200 data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-semibold">
                               <Link href={item.href}>{item.label}</Link>
                              </SidebarMenuSubButton>
                           </SidebarMenuItem>
@@ -335,14 +457,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenuItem>
               )}
 
-               {hasPermission('manage_customers') && (
+
+               {showCustomerGroup && (
                 <SidebarMenuItem>
-                  <Collapsible defaultOpen={isCustomerPage} className="group/collapsible">
+                  <Collapsible defaultOpen={isCustomerPage} open={isSearching ? true : undefined} className="group/collapsible">
                      <CollapsibleTrigger asChild>
                       <SidebarMenuButton
                         isActive={isCustomerPage}
                         tooltip={{ children: "Customers" }}
-                        className="justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm"
+                        className="group/nav relative justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm hover:translate-x-0.5 hover:bg-sidebar-accent/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-0 before:bg-primary before:rounded-r-full before:transition-all before:duration-300 data-[active=true]:before:h-2/3 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/15 data-[active=true]:via-primary/5 data-[active=true]:to-transparent data-[active=true]:shadow-sm [&_>div_svg]:transition-transform [&_>div_svg]:duration-200 hover:[&_>div_svg]:scale-110 data-[active=true]:[&_>div_svg]:text-primary"
                       >
                         <div className="flex items-center gap-3">
                           <UserIcon />
@@ -353,9 +476,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </CollapsibleTrigger>
                      <CollapsibleContent>
                       <SidebarMenuSub className="ml-5 border-l-2 border-sidebar-border/40 pl-3 my-2 space-y-1">
-                        {customerNavItems.map((item) => (
+                        {customerFiltered.map((item) => (
                            <SidebarMenuItem key={item.href}>
-                             <SidebarMenuSubButton asChild isActive={pathname === item.href} className="text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 transition-colors duration-200">
+                             <SidebarMenuSubButton asChild isActive={pathname === item.href} className="relative text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 hover:translate-x-0.5 transition-all duration-200 data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-semibold">
                               <Link href={item.href}>{item.label}</Link>
                              </SidebarMenuSubButton>
                           </SidebarMenuItem>
@@ -366,14 +489,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenuItem>
               )}
 
-               {hasPermission('manage_purchases') && (
+               {showPurchasesGroup && (
                 <SidebarMenuItem>
-                  <Collapsible defaultOpen={isPurchasesPage} className="group/collapsible">
+                  <Collapsible defaultOpen={isPurchasesPage} open={isSearching ? true : undefined} className="group/collapsible">
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton
                         isActive={isPurchasesPage}
                         tooltip={{ children: "Purchases" }}
-                         className="justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm"
+                         className="group/nav relative justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm hover:translate-x-0.5 hover:bg-sidebar-accent/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-0 before:bg-primary before:rounded-r-full before:transition-all before:duration-300 data-[active=true]:before:h-2/3 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/15 data-[active=true]:via-primary/5 data-[active=true]:to-transparent data-[active=true]:shadow-sm [&_>div_svg]:transition-transform [&_>div_svg]:duration-200 hover:[&_>div_svg]:scale-110 data-[active=true]:[&_>div_svg]:text-primary"
                       >
                          <div className="flex items-center gap-3">
                           <ShoppingCart />
@@ -384,9 +507,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub className="ml-5 border-l-2 border-sidebar-border/40 pl-3 my-2 space-y-1">
-                         {purchasesNavItems.map((item) => (
+                         {purchasesFiltered.map((item) => (
                           <SidebarMenuItem key={item.href}>
-                             <SidebarMenuSubButton asChild isActive={pathname === item.href} className="text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 transition-colors duration-200">
+                             <SidebarMenuSubButton asChild isActive={pathname === item.href} className="relative text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 hover:translate-x-0.5 transition-all duration-200 data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-semibold">
                               <Link href={item.href}>{item.label}</Link>
                              </SidebarMenuSubButton>
                           </SidebarMenuItem>
@@ -397,14 +520,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenuItem>
               )}
 
-               {hasPermission('manage_suppliers') && (
+               {showSuppliersGroup && (
                 <SidebarMenuItem>
-                  <Collapsible defaultOpen={isSuppliersPage} className="group/collapsible">
+                  <Collapsible defaultOpen={isSuppliersPage} open={isSearching ? true : undefined} className="group/collapsible">
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton
                         isActive={isSuppliersPage}
                         tooltip={{ children: "Suppliers" }}
-                         className="justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm"
+                         className="group/nav relative justify-between gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm hover:translate-x-0.5 hover:bg-sidebar-accent/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-0 before:bg-primary before:rounded-r-full before:transition-all before:duration-300 data-[active=true]:before:h-2/3 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/15 data-[active=true]:via-primary/5 data-[active=true]:to-transparent data-[active=true]:shadow-sm [&_>div_svg]:transition-transform [&_>div_svg]:duration-200 hover:[&_>div_svg]:scale-110 data-[active=true]:[&_>div_svg]:text-primary"
                       >
                          <div className="flex items-center gap-3">
                           <Users />
@@ -415,9 +538,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub className="ml-5 border-l-2 border-sidebar-border/40 pl-3 my-2 space-y-1">
-                         {suppliersNavItems.map((item) => (
+                         {suppliersFiltered.map((item) => (
                           <SidebarMenuItem key={item.href}>
-                             <SidebarMenuSubButton asChild isActive={pathname === item.href} className="text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 transition-colors duration-200">
+                             <SidebarMenuSubButton asChild isActive={pathname === item.href} className="relative text-[13px] h-9 rounded-md hover:bg-sidebar-accent/50 hover:translate-x-0.5 transition-all duration-200 data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-semibold">
                               <Link href={item.href}>{item.label}</Link>
                              </SidebarMenuSubButton>
                           </SidebarMenuItem>
@@ -441,7 +564,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       <SidebarMenuButton
                         isActive={pathname === item.href}
                         tooltip={{ children: item.label }}
-                        className="gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm"
+                        className="group/nav relative gap-3 px-4 py-2.5 font-medium rounded-lg transition-all duration-200 hover:shadow-sm hover:translate-x-0.5 hover:bg-sidebar-accent/50 before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-0 before:bg-primary before:rounded-r-full before:transition-all before:duration-300 data-[active=true]:before:h-2/3 data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/20 data-[active=true]:via-primary/10 data-[active=true]:to-transparent data-[active=true]:text-primary data-[active=true]:shadow-sm [&_svg]:transition-transform [&_svg]:duration-200 hover:[&_svg]:scale-110 data-[active=true]:[&_svg]:text-primary"
                       >
                         <item.icon />
                         <span className="text-[14px]">{item.label}</span>
@@ -452,9 +575,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarMenu>
             </SidebarGroup>
           )}
+          {isSearching && !hasAnyMatch && (
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+              <Search className="mx-auto h-6 w-6 opacity-40 mb-2" />
+              <p className="font-medium">No menu items found</p>
+              <p className="text-[11px] mt-1 opacity-70">Try a different search term</p>
+            </div>
+          )}
         </SidebarContent>
 
         <SidebarFooter className="sticky bottom-0 bg-gradient-to-t from-sidebar to-sidebar/95 backdrop-blur-xl border-t border-sidebar-border mt-auto shadow-lg">
+          <SidebarThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex w-full items-center gap-3 overflow-hidden rounded-lg p-3 text-left text-sm text-sidebar-foreground outline-none ring-sidebar-ring transition-all duration-200 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 hover:shadow-sm">
@@ -494,11 +625,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </DropdownMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
 
         <header className="sticky top-0 z-30 flex items-center h-16 gap-4 px-4 border-b bg-background/80 backdrop-blur-sm sm:px-6 non-printable window-drag">
           <div className="flex items-center gap-4 window-no-drag">
-            <SidebarTrigger />
+            <AnimatedHamburger />
             <AppBreadcrumbs />
           </div>
           <div className="flex-1" />
@@ -507,7 +638,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <WindowControls />
           </div>
         </header>
-        <main className="flex-1 flex flex-col overflow-auto p-4 sm:p-6 min-h-0">
+        <main className="flex-1 flex flex-col overflow-auto p-4 sm:p-6 min-h-0 min-w-0">
           {children}
         </main>
       </SidebarInset>

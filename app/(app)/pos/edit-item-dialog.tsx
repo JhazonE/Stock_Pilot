@@ -90,23 +90,23 @@ export function EditItemDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className={`p-0 overflow-hidden border-none shadow-2xl ${mode === 'price-only' ? 'sm:max-w-[400px]' : 'sm:max-w-md'}`}>
-        <div className="bg-white p-6 space-y-6">
+      <DialogContent className={`p-0 overflow-hidden shadow-2xl ${mode === 'price-only' ? 'sm:max-w-[400px]' : 'sm:max-w-md'}`}>
+        <div className="bg-background p-6 space-y-6">
           <DialogHeader className="space-y-3">
             <div className="flex justify-center">
-              <div className={`${mode === 'price-only' ? 'bg-purple-50' : 'bg-blue-50'} p-3 rounded-2xl`}>
+              <div className={`${mode === 'price-only' ? 'bg-purple-500/10' : 'bg-blue-500/10'} p-3 rounded-2xl`}>
                 {mode === 'price-only' ? (
-                  <Tag className="w-8 h-8 text-purple-600" />
+                  <Tag className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                 ) : (
-                  <Pencil className="w-8 h-8 text-blue-600" />
+                  <Pencil className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                 )}
               </div>
             </div>
-            <DialogTitle className="text-2xl font-extrabold text-center text-slate-800">
+            <DialogTitle className="text-2xl font-extrabold text-center text-foreground">
               {mode === 'price-only' ? 'Edit Unit Price' : 'Edit Item Details'}
             </DialogTitle>
-            <p className="text-sm text-slate-500 text-center px-4">
-              {mode === 'price-only' 
+            <p className="text-sm text-muted-foreground text-center px-4">
+              {mode === 'price-only'
                 ? `Enter a temporary price for ${item.name}`
                 : 'Temporary changes for this transaction only.'}
             </p>
@@ -116,7 +116,7 @@ export function EditItemDialog({
             {mode === 'price-only' ? (
               <div className="space-y-3">
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-purple-300">₱</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-purple-400 dark:text-purple-500 z-10">₱</span>
                   <Input
                     id="price"
                     type="number"
@@ -129,20 +129,20 @@ export function EditItemDialog({
                         save();
                       }
                     }}
-                    className="font-black focus-visible:ring-purple-500 text-[32px] h-20 pl-10 pr-4 text-right leading-none bg-slate-50 border-slate-200 rounded-2xl focus:bg-white transition-colors"
+                    className="font-black focus-visible:ring-purple-500 text-[32px] h-20 pl-10 pr-4 text-right leading-none bg-muted/40 border-input rounded-2xl focus:bg-background transition-colors"
                     autoFocus
                   />
                 </div>
-                
+
                 <div className="flex justify-between items-center text-xs px-2">
-                  <span className="font-bold text-slate-500 uppercase tracking-tight">Original Price</span>
-                  <span className="font-mono font-bold text-slate-700">₱{item.price.toFixed(2)}</span>
+                  <span className="font-bold text-muted-foreground uppercase tracking-tight">Original Price</span>
+                  <span className="font-mono font-bold text-foreground">₱{item.price.toFixed(2)}</span>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-xs font-bold text-slate-600 uppercase tracking-tight ml-1">Item Name</Label>
+                  <Label htmlFor="name" className="text-xs font-bold text-muted-foreground uppercase tracking-tight ml-1">Item Name</Label>
                   <Input
                     id="name"
                     value={name}
@@ -153,28 +153,28 @@ export function EditItemDialog({
                         save();
                       }
                     }}
-                    className="font-medium focus-visible:ring-blue-500 h-12 bg-slate-50 border-slate-200 rounded-xl px-4"
+                    className="font-medium focus-visible:ring-blue-500 h-12 bg-muted/40 rounded-xl px-4"
                     placeholder="Enter new item name"
                     autoFocus
                   />
-                  <p className="text-xs text-slate-400 italic ml-1">
+                  <p className="text-xs text-muted-foreground/70 italic ml-1">
                     Original: {item.name}
                   </p>
                 </div>
-                
-                <div className="bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-100">
+
+                <div className="bg-muted/40 p-4 rounded-xl space-y-2 border">
                   <div className="flex justify-between text-sm">
-                    <span className="font-bold text-slate-500">Unit Price:</span>
-                    <span className="font-mono font-bold text-slate-700">₱{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-bold text-muted-foreground">Unit Price:</span>
+                    <span className="font-mono font-bold text-foreground">₱{price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="font-bold text-slate-500">Quantity:</span>
-                    <span className="font-mono font-bold text-slate-700">{quantity}</span>
+                    <span className="font-bold text-muted-foreground">Quantity:</span>
+                    <span className="font-mono font-bold text-foreground">{quantity}</span>
                   </div>
                   {item.discount > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="font-bold text-slate-500">Discount:</span>
-                      <span className="font-mono font-bold text-green-600">{item.discount}%</span>
+                      <span className="font-bold text-muted-foreground">Discount:</span>
+                      <span className="font-mono font-bold text-green-600 dark:text-green-400">{item.discount}%</span>
                     </div>
                   )}
                 </div>
@@ -183,18 +183,18 @@ export function EditItemDialog({
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button 
-              variant="outline" 
-              className="flex-1 h-12 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 transition-colors"
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-xl font-bold text-muted-foreground hover:bg-muted transition-colors"
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               className={`flex-1 h-12 rounded-xl font-bold text-white shadow-lg transition-all active:scale-[0.98] ${
-                mode === 'price-only' 
-                  ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200/50' 
-                  : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200/50'
+                mode === 'price-only'
+                  ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/20'
+                  : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20'
               }`}
               onClick={save}
             >

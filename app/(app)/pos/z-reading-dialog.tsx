@@ -3,14 +3,14 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Printer, ArrowLeft, Loader2 } from 'lucide-react';
+import { Printer, ArrowLeft, Loader2, FileCheck2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AdminAuthDialog } from './admin-auth-dialog';
 import { ZReadingPreview, BusinessSettings } from '../sales/z-reading/z-reading-preview';
@@ -21,6 +21,22 @@ import { getApiUrl } from '@/lib/api-config';
 
 import { useReactToPrint } from 'react-to-print';
 import { useRef } from 'react';
+
+function ReportHeader({ subtitle }: { subtitle?: string }) {
+    return (
+        <SheetHeader className="shrink-0 space-y-0 border-b bg-muted/20 px-6 py-4 pr-12 text-left">
+            <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <FileCheck2 className="h-5 w-5" />
+                </div>
+                <div>
+                    <h2 className="text-lg font-bold leading-none">Z-Reading Report</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">{subtitle || 'End-of-day sales report'}</p>
+                </div>
+            </div>
+        </SheetHeader>
+    );
+}
 
 function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initialData }: { onBack: () => void, printMode: 'browser' | 'escpos' | 'usb' | 'native', terminalId?: string, terminalName?: string, initialData?: ZReadingData | null }): JSX.Element {
     const [data, setData] = useState<ZReadingData | null>(initialData || null);
@@ -33,7 +49,7 @@ function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initi
     const paperSize = businessSettings?.paperSize || '58mm';
 
     const handleReactToPrint = useReactToPrint({
-        contentRef: contentRef, 
+        contentRef: contentRef,
         content: () => contentRef.current,
         documentTitle: 'Z-Reading-Report',
         pageStyle: `
@@ -63,7 +79,7 @@ function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initi
         onAfterPrint: () => console.log('Print finished'),
         onPrintError: (error: unknown) => console.error('Print error:', error),
     } as any);
-    
+
     useEffect(() => {
         const fetchData = async () => {
             if (initialData) {
@@ -160,7 +176,7 @@ function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initi
                     title: "Z-Reading Finalized",
                     description: `Report ${saveResult.data[0].id} has been saved successfully.`,
                 });
-                
+
                 // Close dialog after successful finalization
                 setTimeout(() => onBack(), 1500);
             } else {
@@ -182,71 +198,58 @@ function ZReadingReportView({ onBack, printMode, terminalId, terminalName, initi
         }
     };
 
-
     if (isLoading) {
         return (
-            <div className="flex flex-col h-full max-h-[85vh]">
-                <DialogHeader className="px-4 py-3 border-b flex-none">
-                    <DialogTitle>Z-READING REPORT</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col items-center justify-center flex-1">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">Generating Z-Reading Report...</p>
+            <>
+                <ReportHeader subtitle={terminalName} />
+                <div className="flex flex-1 flex-col items-center justify-center gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <p className="text-muted-foreground">Generating Z-Reading Report…</p>
                 </div>
-            </div>
+            </>
         );
     }
 
     if (!data) {
         return (
-             <div className="flex flex-col h-full max-h-[85vh]">
-                <DialogHeader className="px-4 py-3 border-b flex-none">
-                    <DialogTitle>Z-READING REPORT</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col items-center justify-center flex-1 p-6 text-center">
+            <>
+                <ReportHeader subtitle={terminalName} />
+                <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
                     <p className="text-muted-foreground">No pending sales found for Z-Reading. All transactions might have been finalized already.</p>
                     <Button variant="outline" onClick={onBack} className="mt-4">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back
                     </Button>
                 </div>
-            </div>
+            </>
         );
     }
 
     return (
-        <div className="flex flex-col h-full max-h-[85vh]">
-            <DialogHeader className="px-4 py-3 border-b flex-none flex flex-row items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <DialogTitle>Z-READING REPORT</DialogTitle>
+        <>
+            <ReportHeader subtitle={terminalName} />
+
+            <div className="flex flex-1 justify-center overflow-auto bg-muted/30 p-4">
+                <div className="h-fit w-full max-w-[400px] bg-white shadow-lg">
+                    <ZReadingPreview
+                        ref={contentRef}
+                        data={data}
+                        businessSettings={businessSettings}
+                        printerFormat={paperSize as any}
+                    />
                 </div>
-                <div className="flex gap-2">
-                    {!isConnected && printMode !== 'browser' && (
-                        <Button variant="outline" size="sm" onClick={connect}>
-                            Connect Printer
-                        </Button>
-                    )}
-                    <Button size="sm" onClick={handlePrintAndFinalize} disabled={isPrinting}>
-                        {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+            </div>
+
+            <div className="shrink-0 border-t bg-background px-6 py-4">
+                <div className="grid grid-cols-[1fr_2fr] gap-3">
+                    <Button variant="outline" className="h-12" onClick={onBack}>Close</Button>
+                    <Button className="h-12 text-base font-bold" onClick={handlePrintAndFinalize} disabled={isPrinting}>
+                        {isPrinting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Printer className="mr-2 h-5 w-5" />}
                         Print Z-Reading
                     </Button>
                 </div>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-auto p-4 bg-muted/20 flex justify-center">
-                 <div className="max-w-[400px] w-full shadow-lg bg-white h-fit">
-                    <ZReadingPreview 
-                        ref={contentRef}
-                        data={data} 
-                        businessSettings={businessSettings} 
-                        printerFormat={paperSize as any} 
-                    />
-                 </div>
             </div>
-        </div>
+        </>
     );
 }
 
@@ -271,44 +274,50 @@ export function ZReadingDialog({
 }: ZReadingDialogProps) {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [showReport, setShowReport] = useState(false);
-  
+  const authSucceededRef = useRef(false);
+
   useEffect(() => {
     if (isOpen && (autoShow || initialData)) {
+        authSucceededRef.current = true;
         setShowReport(true);
     } else if (isOpen) {
+        authSucceededRef.current = false;
         setIsAuthDialogOpen(true);
     } else {
+        authSucceededRef.current = false;
         setIsAuthDialogOpen(false);
         setShowReport(false);
     }
   }, [isOpen, autoShow, initialData]);
-  
+
   const handleAdminAuthSuccess = () => {
+    authSucceededRef.current = true;
     setIsAuthDialogOpen(false);
     setShowReport(true);
   };
 
   return (
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-xl p-0 overflow-hidden">
-            {showReport ? (
+    <>
+      <Sheet open={isOpen && showReport} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+            <SheetTitle className="sr-only">Z-Reading Report</SheetTitle>
+            <SheetDescription className="sr-only">End-of-day sales reading report.</SheetDescription>
+
+            {showReport && (
                 <ZReadingReportView onBack={() => onOpenChange(false)} printMode={printMode} terminalId={terminalId} terminalName={terminalName} initialData={initialData} />
-            ) : (
-                <div className="p-6">
-                    <DialogHeader>
-                        <DialogTitle>Z-Reading Authorization</DialogTitle>
-                        <DialogDescription>
-                            Admin password is required to generate the final end-of-day report.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <AdminAuthDialog 
-                        isOpen={isAuthDialogOpen}
-                        onOpenChange={setIsAuthDialogOpen}
-                        onSuccess={handleAdminAuthSuccess}
-                    />
-                </div>
             )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
+
+      <AdminAuthDialog
+          isOpen={isAuthDialogOpen}
+          onOpenChange={(open) => {
+              setIsAuthDialogOpen(open);
+              // If auth dialog closed without success → close the whole flow
+              if (!open && !authSucceededRef.current) onOpenChange(false);
+          }}
+          onSuccess={handleAdminAuthSuccess}
+      />
+    </>
   );
 }

@@ -93,16 +93,16 @@ function SortHeader({ column, label, className }: { column: any; label: string; 
     <Button
       variant="ghost"
       size="sm"
-      className={cn('h-8 -ml-3 text-primary-foreground hover:text-primary-foreground hover:bg-primary/80 font-semibold', className)}
+      className={cn('h-7 -ml-2 px-1.5 text-primary-foreground hover:text-primary-foreground hover:bg-primary/80 font-semibold text-[11px]', className)}
       onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
     >
       {label}
       {column.getIsSorted() === 'asc' ? (
-        <ArrowUp className="ml-1 h-3 w-3" />
+        <ArrowUp className="ml-0.5 h-3 w-3" />
       ) : column.getIsSorted() === 'desc' ? (
-        <ArrowDown className="ml-1 h-3 w-3" />
+        <ArrowDown className="ml-0.5 h-3 w-3" />
       ) : (
-        <ArrowUpDown className="ml-1 h-3 w-3 opacity-60" />
+        <ArrowUpDown className="ml-0.5 h-3 w-3 opacity-60" />
       )}
     </Button>
   );
@@ -240,7 +240,7 @@ export default function SalesPage() {
       header: ({ column }) => <SortHeader column={column} label="Date" />,
       cell: ({ row }) => {
         const d = row.original.date || row.original.invoiceDate;
-        return d ? format(new Date(d), 'MMM dd, yyyy hh:mm a') : 'N/A';
+        return d ? format(new Date(d), 'MM/dd/yy hh:mm a') : 'N/A';
       },
     },
     {
@@ -428,9 +428,9 @@ export default function SalesPage() {
 
   return (
     <>
-      <div className="flex flex-col gap-4">
-        <Card>
-          <CardHeader>
+      <div className="flex flex-col gap-4 w-full min-w-0">
+        <Card className="flex flex-col min-w-0">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle>Sales Transactions</CardTitle>
@@ -438,23 +438,23 @@ export default function SalesPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col min-w-0">
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
-              <div className="bg-muted/50 rounded-lg p-3 border"><p className="text-xs text-muted-foreground font-medium">Discounts</p><p className="text-lg font-bold">₱{summaryTotals.discounts.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
-              <div className="bg-muted/50 rounded-lg p-3 border"><p className="text-xs text-muted-foreground font-medium">Revenue</p><p className="text-lg font-bold text-primary">₱{summaryTotals.revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
-              <div className="bg-muted/50 rounded-lg p-3 border"><p className="text-xs text-muted-foreground font-medium">Amount Paid</p><p className="text-lg font-bold">₱{summaryTotals.amountPaid.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
-              <div className="bg-muted/50 rounded-lg p-3 border"><p className="text-xs text-muted-foreground font-medium">Customer Balance</p><p className="text-lg font-bold">₱{summaryTotals.customerBalance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
-              <div className="bg-muted/50 rounded-lg p-3 border"><p className="text-xs text-muted-foreground font-medium">Cost</p><p className="text-lg font-bold">₱{summaryTotals.cost.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
-              <div className="bg-muted/50 rounded-lg p-3 border"><p className="text-xs text-muted-foreground font-medium">Gross Profit</p><p className="text-lg font-bold text-green-600">₱{summaryTotals.grossProfit.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
-              <div className="bg-muted/50 rounded-lg p-3 border"><p className="text-xs text-muted-foreground font-medium">Vatable Sales</p><p className="text-lg font-bold">₱{summaryTotals.vatableSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
-              <div className="bg-muted/50 rounded-lg p-3 border"><p className="text-xs text-muted-foreground font-medium">VAT Amount</p><p className="text-lg font-bold">₱{summaryTotals.vatAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
-              <div className="bg-muted/50 rounded-lg p-3 border"><p className="text-xs text-muted-foreground font-medium">Non-Vat Sales</p><p className="text-lg font-bold">₱{summaryTotals.nonVatSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
-              <div className="bg-muted/50 rounded-lg p-3 border"><p className="text-xs text-muted-foreground font-medium">Account Payments</p><p className="text-lg font-bold">₱{summaryTotals.accountPayments.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-3 shrink-0">
+              <div className="bg-muted/50 rounded-lg p-2 border"><p className="text-[10px] text-muted-foreground font-medium">Discounts</p><p className="text-sm font-bold">₱{summaryTotals.discounts.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
+              <div className="bg-muted/50 rounded-lg p-2 border"><p className="text-[10px] text-muted-foreground font-medium">Revenue</p><p className="text-sm font-bold text-primary">₱{summaryTotals.revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
+              <div className="bg-muted/50 rounded-lg p-2 border"><p className="text-[10px] text-muted-foreground font-medium">Amount Paid</p><p className="text-sm font-bold">₱{summaryTotals.amountPaid.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
+              <div className="bg-muted/50 rounded-lg p-2 border"><p className="text-[10px] text-muted-foreground font-medium">Customer Balance</p><p className="text-sm font-bold">₱{summaryTotals.customerBalance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
+              <div className="bg-muted/50 rounded-lg p-2 border"><p className="text-[10px] text-muted-foreground font-medium">Cost</p><p className="text-sm font-bold">₱{summaryTotals.cost.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
+              <div className="bg-muted/50 rounded-lg p-2 border"><p className="text-[10px] text-muted-foreground font-medium">Gross Profit</p><p className="text-sm font-bold text-green-600">₱{summaryTotals.grossProfit.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
+              <div className="bg-muted/50 rounded-lg p-2 border"><p className="text-[10px] text-muted-foreground font-medium">Vatable Sales</p><p className="text-sm font-bold">₱{summaryTotals.vatableSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
+              <div className="bg-muted/50 rounded-lg p-2 border"><p className="text-[10px] text-muted-foreground font-medium">VAT Amount</p><p className="text-sm font-bold">₱{summaryTotals.vatAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
+              <div className="bg-muted/50 rounded-lg p-2 border"><p className="text-[10px] text-muted-foreground font-medium">Non-Vat Sales</p><p className="text-sm font-bold">₱{summaryTotals.nonVatSales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
+              <div className="bg-muted/50 rounded-lg p-2 border"><p className="text-[10px] text-muted-foreground font-medium">Account Payments</p><p className="text-sm font-bold">₱{summaryTotals.accountPayments.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p></div>
             </div>
 
             {/* Search and Filters Row */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-3 shrink-0">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input type="search" placeholder="Search by ID or customer..." className="pl-8 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -524,8 +524,8 @@ export default function SalesPage() {
               </div>
             </div>
 
-            <div className="border rounded-md overflow-hidden">
-              <Table className="text-xs" wrapperClassName="max-h-[500px] overflow-auto">
+            <div className="border rounded-md overflow-hidden min-w-0">
+              <Table className="text-[11px]" wrapperClassName="max-h-[500px] min-w-0 overflow-auto">
                 <TableHeader className="sticky top-0 z-20 bg-primary">
                   {table.getHeaderGroups().map(hg => (
                     <TableRow key={hg.id} className="bg-primary hover:bg-primary border-0">
@@ -533,10 +533,10 @@ export default function SalesPage() {
                         <TableHead
                           key={header.id}
                           className={cn(
-                            'text-primary-foreground font-semibold py-2 px-2 bg-primary sticky top-0',
-                            header.column.id === 'expand' && 'w-8',
+                            'text-primary-foreground font-semibold py-1.5 px-1.5 bg-primary sticky top-0 whitespace-nowrap',
+                            header.column.id === 'expand' && 'w-6',
                             header.column.id === 'total' && 'text-right',
-                            header.column.id === 'paymentStatus' && 'pr-4',
+                            header.column.id === 'paymentStatus' && 'pr-2',
                           )}
                         >
                           {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
@@ -570,7 +570,7 @@ export default function SalesPage() {
                             onClick={() => toggleRowExpansion(rowId)}
                           >
                             {row.getVisibleCells().map(cell => (
-                              <TableCell key={cell.id} className="py-2 px-2">
+                              <TableCell key={cell.id} className="py-1.5 px-1.5 whitespace-nowrap">
                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
                               </TableCell>
                             ))}
@@ -610,7 +610,7 @@ export default function SalesPage() {
 
             {/* Pagination Controls */}
             {!isLoading && sales.length > 0 && (
-              <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="mt-3 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mr-auto sm:mr-0 whitespace-nowrap">
                   <Label htmlFor="rows-per-page" className="text-sm font-normal">Rows per page:</Label>
                   <Select value={limit.toString()} onValueChange={(val) => { setLimit(Number(val)); setCurrentPage(1); }}>

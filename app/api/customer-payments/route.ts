@@ -67,23 +67,32 @@ export async function POST(request: NextRequest) {
 
                 // 1. Get current invoice details (using FOR UPDATE to lock row during transaction)
                 const [invoiceResult]: any = await connection.query(
-                    'SELECT total, amount_paid FROM sales_invoices WHERE id = ? FOR UPDATE', 
+                    'SELECT total, amount_paid FROM sales_invoices WHERE id = ? FOR UPDATE',
                     [alloc.invoiceId]
                 );
 
                 if (!invoiceResult || invoiceResult.length === 0) continue;
-                
+
                 const invoice = invoiceResult[0];
                 const currentAmountPaid = Number(invoice.amount_paid || 0);
                 const newAmountPaid = currentAmountPaid + Number(alloc.amountAllocated);
-                const newStatus = newAmountPaid >= Number(invoice.total) ? 'Paid' : 'Pending';
+                const newStatus = newAmountPaid >= Number(invoice.total) ? 'Paid' : 'Partially Paid';
 
                 // 2. Update invoice amount_paid and status
                 await connection.query(
-                    `UPDATE sales_invoices 
+                    `UPDATE sales_invoices
                      SET amount_paid = ?, status = ?, updated_at = NOW()
                      WHERE id = ?`,
                     [newAmountPaid, newStatus, alloc.invoiceId]
+                );
+
+                // 3. Insert allocation record
+                const allocationId = uuidv4();
+                await connection.query(
+                    `INSERT INTO customer_payment_allocations
+                     (id, customer_payment_id, invoice_id, amount_allocated)
+                     VALUES (?, ?, ?, ?)`,
+                    [allocationId, paymentId, alloc.invoiceId, alloc.amountAllocated]
                 );
             }
         }
@@ -97,7 +106,7 @@ export async function POST(request: NextRequest) {
             paymentType,
             paymentDate,
             amount,
-            reference,
+            reference: finalReference,
             note,
             allocations
           },

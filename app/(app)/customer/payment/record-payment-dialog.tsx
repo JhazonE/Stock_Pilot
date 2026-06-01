@@ -48,13 +48,6 @@ import { useRouter } from 'next/navigation';
 import { getApiUrl } from '@/lib/api-config';
 import { formatCurrency } from '@/lib/utils';
 
-const MOCK_PAYMENT_METHODS: PaymentMethod[] = [
-    { id: 'pm_1', name: 'Cash' },
-    { id: 'pm_2', name: 'Credit Card' },
-    { id: 'pm_3', name: 'Bank Transfer' },
-    { id: 'pm_4', name: 'GCash' },
-    { id: 'pm_5', name: 'Check' },
-];
 
 const paymentSchema = z.object({
   amount: z.coerce.number().positive('Payment amount must be positive.'),
@@ -153,13 +146,23 @@ export default function RecordPaymentDialog({ sale, children, onSuccess }: Recor
   };
 
   useEffect(() => {
-    // Simulate fetching payment methods
-    // TODO: Fetch from real API when available
-    setIsLoadingPaymentMethods(true);
-    setTimeout(() => {
-        setPaymentMethods(MOCK_PAYMENT_METHODS);
+    const fetchPaymentMethods = async () => {
+      try {
+        setIsLoadingPaymentMethods(true);
+        const response = await fetch(getApiUrl('/payment-methods?activeOnly=true'));
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            setPaymentMethods(result.data || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching payment methods:', error);
+      } finally {
         setIsLoadingPaymentMethods(false);
-    }, 300);
+      }
+    };
+    fetchPaymentMethods();
   }, []);
 
   const form = useForm<PaymentFormValues>({

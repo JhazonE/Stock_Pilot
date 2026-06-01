@@ -2,24 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Undo, Trash2, Clock, Package, FileText } from 'lucide-react';
+import { Undo, Trash2, Clock, Package, FileText, Pause } from 'lucide-react';
 import type { SaleItem } from './page';
 import type { SuspendedTransaction } from './page';
 import { formatDistanceToNow } from 'date-fns';
@@ -49,7 +39,6 @@ export function HeldTransactionsDialog({
 
   useEffect(() => {
     if (!isOpen) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (heldTransactions.length === 0) return;
 
@@ -60,129 +49,158 @@ export function HeldTransactionsDialog({
         e.preventDefault();
         setSelectedIndex((prev) => (prev < heldTransactions.length - 1 ? prev + 1 : prev));
       } else if (e.key === 'Enter') {
+        const tag = (document.activeElement as HTMLElement)?.tagName;
+        if (tag === 'BUTTON' || tag === 'INPUT') return;
         e.preventDefault();
         onRestore(selectedIndex);
+      } else if (e.key === 'Delete') {
+        e.preventDefault();
+        onDelete(selectedIndex);
       }
     };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, heldTransactions, selectedIndex, onRestore, onDelete]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, heldTransactions, selectedIndex, onRestore]);
+  // Auto-scroll focused row into view
+  useEffect(() => {
+    const id = heldTransactions[selectedIndex]?.id;
+    if (id) document.getElementById(`held-tx-${id}`)?.scrollIntoView({ block: 'nearest' });
+  }, [selectedIndex, heldTransactions]);
 
-  const calculateTotal = (items: SaleItem[]) => {
-    return items.reduce((acc, item) => acc + item.price * item.quantity * (1 - item.discount / 100), 0);
-  };
+  const calculateTotal = (items: SaleItem[]) =>
+    items.reduce((acc, item) => acc + item.price * item.quantity * (1 - item.discount / 100), 0);
 
-  const calculateItemCount = (items: SaleItem[]) => {
-    return items.reduce((acc, item) => acc + item.quantity, 0);
-  }
+  const calculateItemCount = (items: SaleItem[]) =>
+    items.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl" onInteractOutside={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-extrabold text-slate-800">Suspended Transactions</DialogTitle>
-          <DialogDescription className="text-slate-500 font-medium">
-            Select a transaction to restore it to the cart or delete it. Use Up/Down arrows to navigate and Enter to select.
-          </DialogDescription>
-        </DialogHeader>
-        <ScrollArea className="h-[500px]">
-          <div className="space-y-4 p-6 pt-2">
-            {heldTransactions.length > 0 ? (
-              heldTransactions.map((transaction, index) => (
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-lg"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <SheetTitle className="sr-only">Suspended Transactions</SheetTitle>
+        <SheetDescription className="sr-only">Restore or delete suspended transactions. Use arrow keys to navigate and Enter to restore.</SheetDescription>
+
+        {/* Header */}
+        <SheetHeader className="shrink-0 space-y-0 border-b bg-muted/20 px-6 py-4 pr-12 text-left">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                <Pause className="h-5 w-5 fill-current" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold leading-none">Suspended Transactions</h2>
+                <p className="mt-1 text-xs text-muted-foreground">Restore or delete a suspended sale</p>
+              </div>
+            </div>
+            <span className="rounded-lg bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              {heldTransactions.length} held
+            </span>
+          </div>
+        </SheetHeader>
+
+        {/* Keyboard hints */}
+        {heldTransactions.length > 0 && (
+          <div className="flex shrink-0 items-center gap-2 border-b bg-muted/10 px-6 py-1.5 text-[10px] text-muted-foreground">
+            <kbd className="rounded border bg-background px-1 font-mono">↑↓</kbd> navigate
+            <span className="opacity-40">·</span>
+            <kbd className="rounded border bg-background px-1 font-mono">↵</kbd> restore
+            <span className="opacity-40">·</span>
+            <kbd className="rounded border bg-background px-1 font-mono">Del</kbd> delete
+          </div>
+        )}
+
+        {/* List */}
+        <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
+          {heldTransactions.length > 0 ? (
+            heldTransactions.map((transaction, index) => {
+              const isSel = index === selectedIndex;
+              return (
                 <div
                   key={transaction.id || index}
-                  className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
-                    index === selectedIndex
-                      ? 'border-blue-500 bg-blue-50/50 shadow-md transform-none'
-                      : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm'
-                  }`}
+                  id={`held-tx-${transaction.id}`}
                   onClick={() => setSelectedIndex(index)}
                   onDoubleClick={() => onRestore(index)}
+                  className={`relative cursor-pointer overflow-hidden rounded-2xl border-2 transition-all duration-200 ${
+                    isSel
+                      ? 'border-orange-500/60 bg-orange-500/5 shadow-md ring-2 ring-orange-500/20'
+                      : 'border-border bg-card hover:border-orange-400/50 hover:shadow-sm'
+                  }`}
                 >
-                  {/* Accent bar for selected state */}
-                  {index === selectedIndex && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500" />
-                  )}
+                  {isSel && <span className="absolute inset-y-0 left-0 w-1.5 bg-orange-500" />}
 
-                  <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    {/* Left: Note & Details */}
-                    <div className="flex-1 min-w-0 pr-4">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <FileText className={`w-4 h-4 shrink-0 ${index === selectedIndex ? 'text-blue-600' : 'text-slate-400'}`} />
-                        <h4 className={`text-base font-bold truncate ${index === selectedIndex ? 'text-blue-900' : 'text-slate-700'}`}>
-                          {transaction.note || 'No Note Provided'}
-                        </h4>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-                        <div className="flex items-center gap-1.5">
-                          <Package className="w-3.5 h-3.5 opacity-70" />
-                          <span>{calculateItemCount(transaction.items)} items</span>
+                  <div className="flex flex-col gap-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <FileText className={`h-4 w-4 shrink-0 ${isSel ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}`} />
+                          <h4 className={`truncate text-base font-bold ${isSel ? 'text-orange-700 dark:text-orange-300' : 'text-foreground'}`}>
+                            {transaction.note || 'No Note Provided'}
+                          </h4>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 opacity-70" />
-                          <span>
+                        <div className="mt-1.5 flex items-center gap-4 text-xs font-medium text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <Package className="h-3.5 w-3.5 opacity-70" />
+                            {calculateItemCount(transaction.items)} items
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 opacity-70" />
                             {transaction.timestamp
                               ? formatDistanceToNow(new Date(transaction.timestamp), { addSuffix: true })
                               : 'Unknown time'}
                           </span>
                         </div>
                       </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-black tracking-tight text-foreground">
+                          <span className="mr-1 text-base font-bold text-muted-foreground">₱</span>
+                          {calculateTotal(transaction.items).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Right: Amount & Actions */}
-                    <div className="flex flex-col sm:items-end gap-3 shrink-0">
-                      <div className="text-2xl font-black text-slate-800 tracking-tight">
-                        <span className="text-lg mr-1 text-slate-400 font-bold">₱</span>
-                        {calculateTotal(transaction.items).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 rounded-lg font-bold text-slate-600 border-slate-200 hover:bg-slate-50 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRestore(index);
-                          }}
-                        >
-                          <Undo className="mr-1.5 h-3.5 w-3.5" />
-                          Restore
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 rounded-lg font-bold text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(index);
-                          }}
-                        >
-                          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                          Delete
-                        </Button>
-                      </div>
+                    <div className="flex gap-2 border-t border-dashed pt-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 h-9 rounded-lg bg-orange-600 font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-orange-700"
+                        onClick={(e) => { e.stopPropagation(); onRestore(index); }}
+                      >
+                        <Undo className="mr-1.5 h-3.5 w-3.5" />
+                        Restore
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 rounded-lg font-bold text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:text-red-700"
+                        onClick={(e) => { e.stopPropagation(); onDelete(index); }}
+                      >
+                        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-slate-400 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
-                <FileText className="w-12 h-12 mb-3 opacity-20" />
-                <p className="text-lg font-bold">No Suspended Transactions</p>
-                <p className="text-sm font-medium opacity-70">Transactions you suspend will appear here.</p>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+              );
+            })
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed bg-muted/40 px-6 py-20 text-center text-muted-foreground">
+              <Pause className="h-12 w-12 opacity-20 fill-current" />
+              <p className="text-lg font-bold">No Suspended Transactions</p>
+              <p className="text-sm opacity-70">Transactions you suspend will appear here.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 border-t bg-background px-6 py-4">
+          <Button variant="outline" className="h-12 w-full" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

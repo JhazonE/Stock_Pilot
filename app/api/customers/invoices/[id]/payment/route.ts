@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withTransaction } from '@/lib/mysql';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -86,19 +87,28 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         ]);
 
         // 4. Update Invoice Status
-        const newStatus = newAmountPaid >= Number(invoice.total) ? 'Paid' : 'Pending';
-        
+        const newStatus = newAmountPaid >= Number(invoice.total) ? 'Paid' : 'Partially Paid';
+
         const updateInvoiceSql = `
-            UPDATE sales_invoices 
+            UPDATE sales_invoices
             SET amount_paid = ?, status = ?, updated_at = NOW()
             WHERE id = ?
         `;
         await connection.query(updateInvoiceSql, [newAmountPaid, newStatus, invoiceId]);
 
+        // 5. Insert allocation record
+        const allocationId = uuidv4();
+        await connection.query(
+            `INSERT INTO customer_payment_allocations
+             (id, customer_payment_id, invoice_id, amount_allocated)
+             VALUES (?, ?, ?, ?)`,
+            [allocationId, paymentId, invoiceId, amount]
+        );
+
         return NextResponse.json({
             success: true,
             message: 'Payment recorded successfully',
-            data: { paymentId },
+            data: { paymentId, reference: finalReference },
         });
     });
 

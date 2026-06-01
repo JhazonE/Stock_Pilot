@@ -41,6 +41,7 @@ import { format, isPast } from 'date-fns';
 import RecordPaymentDialog from './record-payment-dialog';
 import ViewInvoiceDialog from './view-invoice-dialog';
 import ViewPaymentDialog from './view-payment-dialog';
+import { AddPaymentDialog } from './add-payment-dialog';
 import { printPaymentReceipt } from '@/lib/print-payment-receipt';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -582,6 +583,7 @@ function PaymentHistory() {
                 </div>
 
                 <div className="flex gap-2 sm:ml-auto">
+                    <AddPaymentDialog onSuccess={fetchPayments} />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-9" disabled={isExporting}>

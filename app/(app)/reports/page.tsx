@@ -201,6 +201,76 @@ export default function ReportsPage() {
           </Link>
       </div>
 
+      {/* BIR Compliance Reports Section */}
+      <div className="space-y-2 mt-8">
+        <h2 className="text-2xl font-bold tracking-tight">BIR Compliance Reports</h2>
+        <p className="text-muted-foreground">
+          Bureau of Internal Revenue compliance reports for tax documentation and filing.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Link href="/sales/bir-summary">
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full border-red-100">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 text-red-600" />
+                  BIR Sales Summary
+                </CardTitle>
+                <CardDescription>Daily sales aggregation with VAT breakdown and deductions for BIR reporting.</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/sales/senior-citizen-sales">
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full border-green-100">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-green-600" />
+                  Senior Citizen Sales
+                </CardTitle>
+                <CardDescription>SC customer transactions with OSCA ID and TIN tracking for VAT discounts.</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/sales/pwd-sales">
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full border-blue-100">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  PWD Sales Book
+                </CardTitle>
+                <CardDescription>Person with Disability transactions with PWD ID and VAT exemption documentation.</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/sales/naac-sales">
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full border-purple-100">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-purple-600" />
+                  NAAC Sales Book
+                </CardTitle>
+                <CardDescription>National Athletes and Coaches transactions with PNSTM ID tracking.</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/sales/solo-parent-sales">
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full border-orange-100">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-orange-600" />
+                  Solo Parent Sales Book
+                </CardTitle>
+                <CardDescription>Solo Parent transactions with dependent child information and discount tracking.</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+      </div>
+
       {/* Purchases Reports Section */}
       <div className="space-y-2 mt-8">
         <h2 className="text-2xl font-bold tracking-tight">Purchases Reports</h2>

@@ -581,7 +581,7 @@ export default function SalesByDatePage() {
     dateRange || terminal !== 'all' || interval !== 'daily' || paymentType !== 'all' || searchTerm;
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="flex flex-col">
       <CardHeader className="py-4">
         <div className="flex items-center justify-between">
           <div>
@@ -593,48 +593,48 @@ export default function SalesByDatePage() {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col gap-4 overflow-auto">
+      <CardContent className="flex flex-col gap-4">
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <p className="text-xs text-muted-foreground font-medium">Discount</p>
-            <p className="text-lg font-bold">{formatCurrency(summaryTotals.discount)}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-2 shrink-0">
+          <div className="bg-muted/50 rounded-lg p-2 border">
+            <p className="text-[10px] text-muted-foreground font-medium">Discount</p>
+            <p className="text-sm font-bold">{formatCurrency(summaryTotals.discount)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <p className="text-xs text-muted-foreground font-medium">Revenue</p>
-            <p className="text-lg font-bold text-primary">{formatCurrency(summaryTotals.revenue)}</p>
+          <div className="bg-muted/50 rounded-lg p-2 border">
+            <p className="text-[10px] text-muted-foreground font-medium">Revenue</p>
+            <p className="text-sm font-bold text-primary">{formatCurrency(summaryTotals.revenue)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <p className="text-xs text-muted-foreground font-medium">Amount Paid</p>
-            <p className="text-lg font-bold">{formatCurrency(summaryTotals.revenue)}</p>
+          <div className="bg-muted/50 rounded-lg p-2 border">
+            <p className="text-[10px] text-muted-foreground font-medium">Amount Paid</p>
+            <p className="text-sm font-bold">{formatCurrency(summaryTotals.revenue)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <p className="text-xs text-muted-foreground font-medium">Vatable</p>
-            <p className="text-lg font-bold">{formatCurrency(summaryTotals.vatable)}</p>
+          <div className="bg-muted/50 rounded-lg p-2 border">
+            <p className="text-[10px] text-muted-foreground font-medium">Vatable</p>
+            <p className="text-sm font-bold">{formatCurrency(summaryTotals.vatable)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <p className="text-xs text-muted-foreground font-medium">VAT</p>
-            <p className="text-lg font-bold">{formatCurrency(summaryTotals.vatAmount)}</p>
+          <div className="bg-muted/50 rounded-lg p-2 border">
+            <p className="text-[10px] text-muted-foreground font-medium">VAT</p>
+            <p className="text-sm font-bold">{formatCurrency(summaryTotals.vatAmount)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <p className="text-xs text-muted-foreground font-medium">Exempt</p>
-            <p className="text-lg font-bold">{formatCurrency(summaryTotals.vatExempt)}</p>
+          <div className="bg-muted/50 rounded-lg p-2 border">
+            <p className="text-[10px] text-muted-foreground font-medium">Exempt</p>
+            <p className="text-sm font-bold">{formatCurrency(summaryTotals.vatExempt)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <p className="text-xs text-muted-foreground font-medium">Zero</p>
-            <p className="text-lg font-bold">{formatCurrency(summaryTotals.zeroRated)}</p>
+          <div className="bg-muted/50 rounded-lg p-2 border">
+            <p className="text-[10px] text-muted-foreground font-medium">Zero</p>
+            <p className="text-sm font-bold">{formatCurrency(summaryTotals.zeroRated)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <p className="text-xs text-muted-foreground font-medium">Non-VAT</p>
-            <p className="text-lg font-bold">{formatCurrency(summaryTotals.nonVat)}</p>
+          <div className="bg-muted/50 rounded-lg p-2 border">
+            <p className="text-[10px] text-muted-foreground font-medium">Non-VAT</p>
+            <p className="text-sm font-bold">{formatCurrency(summaryTotals.nonVat)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <p className="text-xs text-muted-foreground font-medium">Cost</p>
-            <p className="text-lg font-bold">{formatCurrency(summaryTotals.cost)}</p>
+          <div className="bg-muted/50 rounded-lg p-2 border">
+            <p className="text-[10px] text-muted-foreground font-medium">Cost</p>
+            <p className="text-sm font-bold">{formatCurrency(summaryTotals.cost)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 border">
-            <p className="text-xs text-muted-foreground font-medium">Profit</p>
-            <p className="text-lg font-bold text-green-600">{formatCurrency(summaryTotals.profit)}</p>
+          <div className="bg-muted/50 rounded-lg p-2 border">
+            <p className="text-[10px] text-muted-foreground font-medium">Profit</p>
+            <p className="text-sm font-bold text-green-600">{formatCurrency(summaryTotals.profit)}</p>
           </div>
         </div>
 
@@ -773,7 +773,7 @@ export default function SalesByDatePage() {
         {/* Table */}
         <Table
           className="text-xs whitespace-nowrap w-full"
-          wrapperClassName="min-h-[450px] max-h-[600px] overflow-auto border rounded-md"
+          wrapperClassName="h-[420px] shrink-0 overflow-auto border rounded-md"
         >
           <TableHeader className="sticky top-0 z-40">
             {table.getHeaderGroups().map((hg) => (
@@ -849,8 +849,8 @@ export default function SalesByDatePage() {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {transactionsByDate[row.original.date].map((tx: any) => (
-                                  <TableRow key={tx.id} className="hover:bg-muted/50">
+                                {transactionsByDate[row.original.date].map((tx: any, txIdx: number) => (
+                                  <TableRow key={`${tx.posTransactionId || tx.id}-${txIdx}`} className="hover:bg-muted/50">
                                     <TableCell className="py-1">{tx.orderNumber}</TableCell>
                                     <TableCell className="py-1">{tx.receiptNo}</TableCell>
                                     <TableCell className="py-1">{tx.cashier}</TableCell>

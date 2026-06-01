@@ -11,6 +11,12 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -408,13 +414,27 @@ export function CustomerAccountDialog({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[1000px] h-[750px] overflow-hidden flex flex-col p-6">
-          <DialogHeader>
-            <DialogTitle className="sr-only">Customer Account Dialog</DialogTitle>
-            <DialogDescription className="sr-only">
-              View and manage customer account details, credit status, and transaction history.
-            </DialogDescription>
+      <Sheet open={isOpen} onOpenChange={onOpenChange}>
+        <SheetContent side="top" className="flex h-screen w-full flex-col gap-0 overflow-hidden p-0">
+          <SheetTitle className="sr-only">Customer Account</SheetTitle>
+          <SheetDescription className="sr-only">View and manage customer account details, credit status, and transaction history.</SheetDescription>
+
+          {/* Polished header */}
+          <div className="shrink-0 border-b bg-muted/20 px-6 py-4 pr-12">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <User className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold leading-none">Customer Account</h2>
+                <p className="mt-1 text-xs text-muted-foreground">Search, select, or add a customer to the sale</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <div>
             <div className="flex justify-between items-start">
               <div className="space-y-4 w-full">
                 <div className="flex items-end gap-3">
@@ -549,7 +569,7 @@ export function CustomerAccountDialog({
                 )}
               </div>
             </div>
-          </DialogHeader>
+            </div>
 
           <div className="mt-4 flex-grow overflow-hidden flex flex-col">
             <Tabs defaultValue="transactions" className="w-full flex-grow flex flex-col">
@@ -809,13 +829,15 @@ export function CustomerAccountDialog({
               </div>
             </Tabs>
           </div>
+          </div>
 
-          <DialogFooter className="mt-6">
+          {/* Sticky footer */}
+          <div className="flex shrink-0 items-center justify-end gap-3 border-t bg-background px-6 py-3">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleSelect}>Confirm Selection</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button onClick={handleSelect} className="min-w-[160px] font-bold">Confirm Selection</Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <AddCustomerDialog
         isOpen={isAddCustomerOpen}

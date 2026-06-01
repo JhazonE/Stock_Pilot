@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,10 +10,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Eye, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { printPaymentReceipt } from '@/lib/print-payment-receipt';
 import { formatCurrency } from '@/lib/utils';
+import { getApiUrl } from '@/lib/api-config';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ViewPaymentDialogProps {
   payment: {
@@ -30,6 +33,31 @@ interface ViewPaymentDialogProps {
 
 export default function ViewPaymentDialog({ payment, children }: ViewPaymentDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [allocations, setAllocations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && payment.id) {
+      fetchAllocations();
+    }
+  }, [isOpen, payment.id]);
+
+  const fetchAllocations = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(getApiUrl(`/customer-payments/${payment.id}/allocations`));
+      if (!response.ok) throw new Error(`API error ${response.status}`);
+      const result = await response.json();
+      if (result.success) {
+        setAllocations(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching allocations:', error);
+      setAllocations([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePrint = () => {
     printPaymentReceipt({
@@ -97,6 +125,35 @@ export default function ViewPaymentDialog({ payment, children }: ViewPaymentDial
                <p className="text-yellow-700 dark:text-yellow-400/90 italic">{payment.note}</p>
             </div>
           )}
+
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ) : allocations.length > 0 ? (
+            <div className="space-y-3 border-t pt-4">
+              <p className="font-semibold text-sm text-muted-foreground uppercase">Applied to Invoices</p>
+              <div className="space-y-2">
+                {allocations.map((alloc) => (
+                  <div key={alloc.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900/20 text-sm">
+                    <div className="flex-1">
+                      <p className="font-medium">{alloc.invoice_reference || alloc.invoice_id}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(alloc.invoice_date), 'PPP')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-green-600">{formatCurrency(alloc.amount_allocated)}</p>
+                      <Badge variant={alloc.status === 'Paid' ? 'default' : 'secondary'} className="text-xs mt-1">
+                        {alloc.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

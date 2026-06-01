@@ -6,14 +6,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import {
   Form,
   FormControl,
@@ -50,7 +50,7 @@ import type { Customer, Sale } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Zap } from 'lucide-react';
 
 const paymentSchema = z.object({
   customerId: z.string().min(1, 'Customer is required'),
@@ -190,6 +190,20 @@ export function AddPaymentDialog({ onSuccess }: AddPaymentDialogProps) {
     }
   };
 
+  const handleAutoAllocate = () => {
+    let remaining = paymentAmount || 0;
+    const next: Record<string, number> = {};
+    for (const inv of invoices) {
+      if (remaining <= 0) break;
+      const toApply = Math.min(remaining, Number(inv.balance));
+      if (toApply > 0) {
+        next[inv.id] = toApply;
+        remaining -= toApply;
+      }
+    }
+    setManualAllocations(next);
+  };
+
   const allocations = Object.entries(manualAllocations)
     .filter(([_, amount]) => amount > 0)
     .map(([invoiceId, amountAllocated]) => ({
@@ -248,20 +262,20 @@ export function AddPaymentDialog({ onSuccess }: AddPaymentDialogProps) {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
           Add Payment
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>Add Payment</DialogTitle>
-          <DialogDescription>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-full sm:w-[600px] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Add Payment</SheetTitle>
+          <SheetDescription>
             Record a new payment from a customer.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -403,7 +417,20 @@ export function AddPaymentDialog({ onSuccess }: AddPaymentDialogProps) {
 
              {selectedCustomerId && (invoices.length > 0 ? (
               <div className="rounded-md border p-2">
-                 <div className="text-sm font-semibold mb-2">Manual Invoice Allocation</div>
+                 <div className="flex justify-between items-center mb-2">
+                   <div className="text-sm font-semibold">Invoice Allocation</div>
+                   <Button
+                     type="button"
+                     size="sm"
+                     variant="outline"
+                     onClick={handleAutoAllocate}
+                     disabled={!paymentAmount || paymentAmount <= 0 || isLoadingInvoices}
+                     className="h-7 text-xs"
+                   >
+                     <Zap className="mr-1 h-3 w-3" />
+                     Auto-Allocate
+                   </Button>
+                 </div>
                  <Table className="text-xs">
                     <TableHeader>
                       <TableRow>
@@ -473,7 +500,7 @@ export function AddPaymentDialog({ onSuccess }: AddPaymentDialogProps) {
               )}
             />
 
-            <DialogFooter>
+            <SheetFooter>
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
                 Cancel
               </Button>
@@ -487,10 +514,10 @@ export function AddPaymentDialog({ onSuccess }: AddPaymentDialogProps) {
                   'Add Payment'
                 )}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
